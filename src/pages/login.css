@@ -1,0 +1,41 @@
+.login-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.login-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.login-field label {
+  color: var(--app-muted);
+  font-size: 0.92rem;
+}
+
+.login-field .form-control {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--app-border);
+  color: var(--app-text);
+}
+
+.login-field .form-control::placeholder {
+  color: rgba(237, 242, 255, 0.4);
+}
+
+.login-field .form-control:focus {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--app-accent);
+  color: var(--app-text);
+  box-shadow: 0 0 0 0.2rem rgba(125, 211, 252, 0.15);
+}
+
+.login-note {
+  color: var(--app-muted);
+}
+
+.login-status {
+  min-height: 1.5rem;
+  margin-bottom: 0;
+  color: var(--app-accent);
+}

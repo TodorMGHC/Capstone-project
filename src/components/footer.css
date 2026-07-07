@@ -1,0 +1,25 @@
+.site-footer {
+  border-top: 1px solid var(--app-border);
+  background: rgba(4, 9, 18, 0.78);
+  backdrop-filter: blur(18px);
+}
+
+.site-footer__inner {
+  padding: 1.25rem 0;
+  color: var(--app-muted);
+  font-size: 0.95rem;
+}
+
+.site-footer__brand {
+  font-family: var(--app-font-display);
+  color: var(--app-text);
+  font-weight: 600;
+}
+
+.site-footer__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}

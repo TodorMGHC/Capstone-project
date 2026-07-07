@@ -1,0 +1,22 @@
+.home-spotlight {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.home-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.home-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--app-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--app-muted);
+  font-size: 0.9rem;
+}
