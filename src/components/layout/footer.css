@@ -1,0 +1,10 @@
+.site-footer {
+  border-top: 1px solid rgba(132, 87, 30, 0.08);
+  background: rgba(255, 250, 240, 0.88);
+}
+
+.site-footer__inner {
+  padding-block: 1rem;
+  color: #8c5a35;
+  font-size: 0.94rem;
+}

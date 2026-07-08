@@ -1,0 +1,30 @@
+.auth-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.auth-form__field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.auth-form__field label {
+  color: var(--lamp-muted);
+  font-size: 0.92rem;
+}
+
+.auth-form__field .form-control {
+  border-color: rgba(132, 87, 30, 0.18);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.auth-form__field .form-control:focus {
+  border-color: var(--lamp-amber);
+  box-shadow: 0 0 0 0.2rem rgba(245, 158, 11, 0.18);
+}
+
+.auth-form__status {
+  min-height: 1.25rem;
+  margin: 0;
+  color: #c2410c;
+}

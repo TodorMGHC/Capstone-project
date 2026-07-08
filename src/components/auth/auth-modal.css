@@ -1,0 +1,44 @@
+.auth-modal .modal-content {
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  border-radius: 1.25rem;
+  background: rgba(18, 15, 10, 0.92);
+  color: #fff7ed;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.45);
+}
+
+.auth-modal .modal-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.auth-modal__tabs {
+  display: inline-flex;
+  gap: 0.5rem;
+  padding: 0.35rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.auth-modal__tab {
+  border: 0;
+  background: transparent;
+  color: #fed7aa;
+  padding: 0.55rem 0.95rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.auth-modal__tab.is-active {
+  background: linear-gradient(135deg, #f59e0b, #fb923c);
+  color: #1f1304;
+}
+
+.auth-modal__body {
+  display: grid;
+  gap: 1rem;
+}
+
+.auth-modal__message {
+  min-height: 1.25rem;
+  color: #fdba74;
+}

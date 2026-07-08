@@ -1,0 +1,95 @@
+.bulgaria-map-panel {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border-radius: 1.5rem;
+  background: rgba(255, 252, 247, 0.94);
+  border: 1px solid rgba(245, 158, 11, 0.08);
+  box-shadow: 0 18px 60px rgba(126, 67, 0, 0.08);
+}
+
+.bulgaria-map-panel__meta {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.bulgaria-map-panel__title {
+  margin: 0;
+  font-family: var(--lamp-font-display);
+  color: #1f1304;
+}
+
+.bulgaria-map-panel__subtitle {
+  margin: 0;
+  color: #8c5a35;
+}
+
+.bulgaria-map-stage {
+  position: relative;
+  min-height: 64vh;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  border: 1px solid rgba(132, 87, 30, 0.1);
+  background: linear-gradient(180deg, #fff8ef, #f8eddc);
+}
+
+.bulgaria-map-stage .leaflet-container {
+  width: 100%;
+  height: 100%;
+  min-height: 64vh;
+  background: #f8eddc;
+  filter: saturate(0.92) sepia(0.32) brightness(1.03);
+}
+
+.lamp-marker {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  color: #fff7ed;
+  background: radial-gradient(circle, rgba(253, 186, 116, 0.95) 0%, rgba(245, 158, 11, 0.95) 35%, rgba(180, 83, 9, 0.95) 100%);
+  box-shadow: 0 0 0 0.4rem rgba(245, 158, 11, 0.14), 0 0 18px rgba(245, 158, 11, 0.45);
+  animation: lamp-pulse 2.4s ease-in-out infinite;
+}
+
+.lamp-marker svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.bulgaria-map__hint {
+  margin: 0;
+  color: #8c5a35;
+  font-size: 0.95rem;
+}
+
+.bulgaria-map__selected {
+  padding: 0.95rem 1rem;
+  border-radius: 1rem;
+  background: rgba(255, 248, 236, 0.95);
+  border: 1px solid rgba(245, 158, 11, 0.08);
+}
+
+.bulgaria-map__selected-label {
+  display: inline-flex;
+  margin-bottom: 0.35rem;
+  color: #b45309;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@keyframes lamp-pulse {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 0 0 0.35rem rgba(245, 158, 11, 0.14), 0 0 18px rgba(245, 158, 11, 0.45);
+  }
+
+  50% {
+    transform: translateY(-1px) scale(1.04);
+    box-shadow: 0 0 0 0.55rem rgba(245, 158, 11, 0.08), 0 0 28px rgba(245, 158, 11, 0.55);
+  }
+}

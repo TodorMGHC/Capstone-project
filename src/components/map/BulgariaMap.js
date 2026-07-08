@@ -1,0 +1,151 @@
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png?url';
+import markerIcon from 'leaflet/dist/images/marker-icon.png?url';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png?url';
+
+import './bulgaria-map.css';
+import { getAppState, openCreateLampForm, selectLamp, setSelectedLampId } from '../../lib/app-store.js';
+import { escapeHtml } from '../../utils/escape-html.js';
+
+let activeMap = null;
+let markersLayer = null;
+
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+});
+
+const BULGARIA_CENTER = [42.7, 25.5];
+
+function createLampDivIcon() {
+  return L.divIcon({
+    className: 'lamp-marker-wrapper',
+    html: `
+      <div class="lamp-marker" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 18h6" />
+          <path d="M10 22h4" />
+          <path d="M12 2a5 5 0 0 0-3 9v3h6V11a5 5 0 0 0-3-9Z" />
+        </svg>
+      </div>
+    `,
+    iconSize: [32, 32],
+    iconAnchor: [16, 28],
+    popupAnchor: [0, -24],
+    tooltipAnchor: [0, -12],
+  });
+}
+
+function formatLampCoordinate(value) {
+  return Number(value).toFixed(6);
+}
+
+export function createBulgariaMap() {
+  const state = getAppState();
+  const selectedLamp = state.lamps.find((lamp) => lamp.id === state.selectedLampId) ?? null;
+
+  return `
+    <section class="bulgaria-map-panel">
+      <div class="bulgaria-map-panel__meta">
+        <h2 class="bulgaria-map-panel__title h4 mb-0">Lamp map of Bulgaria</h2>
+        <p class="bulgaria-map-panel__subtitle mb-0">Click the map to add a lamp report. Click a marker to focus the matching row in the table.</p>
+      </div>
+      <div class="bulgaria-map-stage" data-bulgaria-map></div>
+      <p class="bulgaria-map__hint" data-map-hint>${state.session ? 'Click anywhere on the map to open a new lamp report.' : 'Sign in to add lamps.'}</p>
+      ${selectedLamp
+        ? `
+          <div class="bulgaria-map__selected">
+            <span class="bulgaria-map__selected-label">Selected lamp</span>
+            <h3 class="h5 mb-1">${escapeHtml(selectedLamp.title)}</h3>
+            <p class="mb-1 text-body-secondary">${escapeHtml(selectedLamp.comments || 'No comments yet.')}</p>
+            <small class="text-body-secondary">${formatLampCoordinate(selectedLamp.latitude)}, ${formatLampCoordinate(selectedLamp.longitude)}</small>
+          </div>
+        `
+        : ''}
+    </section>
+  `;
+}
+
+export function afterRenderBulgariaMap(rootElement) {
+  const mapElement = rootElement.querySelector('[data-bulgaria-map]');
+  const hintElement = rootElement.querySelector('[data-map-hint]');
+  const state = getAppState();
+
+  if (!mapElement) {
+    return;
+  }
+
+  if (activeMap) {
+    activeMap.remove();
+    activeMap = null;
+    markersLayer = null;
+  }
+
+  activeMap = L.map(mapElement, {
+    center: BULGARIA_CENTER,
+    zoom: 7,
+    zoomControl: true,
+    scrollWheelZoom: true,
+    preferCanvas: true,
+  });
+
+  markersLayer = L.layerGroup().addTo(activeMap);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19,
+  }).addTo(activeMap);
+
+  const bounds = [];
+  const icon = createLampDivIcon();
+  const markersByLampId = new Map();
+
+  state.lamps.forEach((lamp) => {
+    const marker = L.marker([lamp.latitude, lamp.longitude], { icon }).addTo(markersLayer);
+    markersByLampId.set(lamp.id, marker);
+    marker.bindPopup(`
+      <div style="min-width: 180px">
+        <strong>${escapeHtml(lamp.title)}</strong><br />
+        <span>${escapeHtml(lamp.comments || 'No comments yet.')}</span>
+      </div>
+    `);
+    marker.on('click', () => {
+      selectLamp(lamp.id);
+    });
+    bounds.push([lamp.latitude, lamp.longitude]);
+  });
+
+  const selectedLamp = state.lamps.find((lamp) => lamp.id === state.selectedLampId) ?? null;
+
+  if (selectedLamp) {
+    activeMap.setView([selectedLamp.latitude, selectedLamp.longitude], Math.max(activeMap.getZoom(), 11));
+    markersByLampId.get(selectedLamp.id)?.openPopup();
+  } else if (bounds.length) {
+    activeMap.fitBounds(bounds, { padding: [36, 36], maxZoom: 11 });
+  }
+
+  activeMap.on('click', (event) => {
+    if (!state.session) {
+      if (hintElement) {
+        hintElement.textContent = 'Sign in to add lamps.';
+      }
+      return;
+    }
+
+    const latitude = event.latlng.lat.toFixed(6);
+    const longitude = event.latlng.lng.toFixed(6);
+
+    openCreateLampForm(latitude, longitude);
+    setSelectedLampId(null);
+
+    if (hintElement) {
+      hintElement.textContent = `Draft lamp location set to ${latitude}, ${longitude}.`;
+    }
+  });
+
+  requestAnimationFrame(() => {
+    activeMap?.invalidateSize();
+  });
+}
