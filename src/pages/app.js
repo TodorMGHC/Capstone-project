@@ -3,7 +3,7 @@ import { escapeHtml } from '../utils/escape-html.js';
 import './app.css';
 
 export function getTitle(params) {
-  return `App ${params.id}`;
+  return `Report ${params.id}`;
 }
 
 export function renderPage(params) {
@@ -11,8 +11,8 @@ export function renderPage(params) {
 
   return createPageContent({
     kicker: 'Dynamic route',
-    title: `App ${appId}`,
-    description: `This page is rendered from the /app/${appId} route.`,
+    title: `Report ${appId}`,
+    description: 'The live report experience now lives on the dashboard. Use this route as a light handoff back to the map.',
     body: `
       <div class="app-panel">
         <div class="app-meta">
@@ -20,20 +20,20 @@ export function renderPage(params) {
           <span class="app-chip">Record ID: ${appId}</span>
         </div>
         <div class="app-panel__code">
-          The page body can be swapped per app id.
+          Open the Bulgaria reports dashboard to view the map, table, and editing controls.
         </div>
       </div>
     `,
     aside: `
-      <h2 class="h5 mb-3">Next steps</h2>
+      <h2 class="h5 mb-3">Next step</h2>
       <ul class="list-unstyled mb-0">
-        <li class="mb-2">Connect real data</li>
-        <li class="mb-2">Add nested views</li>
-        <li>Handle loading states</li>
+        <li class="mb-2">Open the dashboard</li>
+        <li class="mb-2">Sign in to add reports</li>
+        <li>Click a pin to inspect it on the map</li>
       </ul>
     `,
     actions: `
-      <a class="btn btn-primary" data-link href="/dashboard">Back to dashboard</a>
+      <a class="btn btn-primary" data-link href="/dashboard">Open dashboard</a>
       <a class="btn btn-outline-light" data-link href="/">Home</a>
     `,
   });

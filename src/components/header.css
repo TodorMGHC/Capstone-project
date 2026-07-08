@@ -61,3 +61,30 @@
   color: #06101d;
   background: linear-gradient(135deg, var(--app-accent), #e0f2fe);
 }
+
+.site-auth-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--app-border);
+  color: var(--app-muted);
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.site-auth-button {
+  white-space: nowrap;
+}
+
+.site-auth-button.btn-light {
+  background: linear-gradient(135deg, #e0f2fe, #cffafe);
+  color: #05101d;
+  border-color: transparent;
+}
+
+.site-auth-button.btn-light:hover,
+.site-auth-button.btn-light:focus {
+  background: linear-gradient(135deg, #f0f9ff, #bae6fd);
+  color: #05101d;
+}

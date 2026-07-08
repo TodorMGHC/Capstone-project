@@ -1,5 +1,6 @@
 import { createFooter } from '../components/footer.js';
 import { createHeader } from '../components/header.js';
+import { initializeAppState, signOut, subscribe } from '../lib/app-store.js';
 import { matchRoute } from './routes.js';
 
 const fallbackRoute = {
@@ -18,7 +19,19 @@ function navigate(pathname) {
   void renderCurrentRoute();
 }
 
+export function navigateTo(pathname) {
+  navigate(pathname);
+}
+
 function handleDocumentClick(event) {
+  const actionElement = event.target.closest('[data-action]');
+
+  if (actionElement?.dataset.action === 'logout') {
+    event.preventDefault();
+    void signOut();
+    return;
+  }
+
   const link = event.target.closest('a[data-link]');
 
   if (!link) {
@@ -77,6 +90,12 @@ export function startRouter(rootElement) {
   window.addEventListener('popstate', () => {
     void renderCurrentRoute();
   });
+
+  subscribe(() => {
+    void renderCurrentRoute();
+  });
+
+  void initializeAppState();
 
   void renderCurrentRoute();
 }
