@@ -49,7 +49,6 @@ export function afterRenderAuthModal(rootElement) {
   }
 
   const state = getAppState();
-  const modeChanged = lastRenderedMode !== state.authMode;
   const justOpened = !lastRenderedOpen;
 
   lastRenderedMode = state.authMode;
@@ -82,7 +81,7 @@ export function afterRenderAuthModal(rootElement) {
   const registerForm = modalElement.querySelector('[data-register-form]');
   const authMessage = modalElement.querySelector('[data-auth-message]');
 
-  if (loginForm && modeChanged) {
+  if (loginForm) {
     loginForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const formData = new FormData(loginForm);
@@ -94,7 +93,7 @@ export function afterRenderAuthModal(rootElement) {
     });
   }
 
-  if (registerForm && modeChanged) {
+  if (registerForm) {
     registerForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const formData = new FormData(registerForm);
