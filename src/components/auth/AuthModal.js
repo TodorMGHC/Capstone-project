@@ -3,8 +3,8 @@ import { createRegisterForm } from './RegisterForm.js';
 import './auth-modal.css';
 import { closeAuthModal, getAppState, login, register, setAuthMode } from '../../lib/app-store.js';
 
-let lastRenderedMode = null;
 let lastRenderedOpen = false;
+let isSubmitting = false;
 
 function renderAuthBody(state) {
   return state.authMode === 'register' ? createRegisterForm() : createLoginForm();
@@ -18,7 +18,7 @@ export function createAuthModal() {
   }
 
   return `
-    <div class="auth-modal-overlay" data-auth-modal>
+    <div class="auth-modal-overlay${lastRenderedOpen ? ' auth-modal-overlay--visible' : ' auth-modal-overlay--enter'}" data-auth-modal>
       <div class="auth-modal">
         <div class="auth-modal__header">
           <div>
@@ -45,17 +45,14 @@ export function afterRenderAuthModal(rootElement) {
 
   if (!modalElement) {
     lastRenderedOpen = false;
+    isSubmitting = false;
     return;
   }
 
-  const state = getAppState();
   const justOpened = !lastRenderedOpen;
-
-  lastRenderedMode = state.authMode;
   lastRenderedOpen = true;
 
   if (justOpened) {
-    modalElement.classList.add('auth-modal-overlay--enter');
     requestAnimationFrame(() => {
       modalElement.classList.add('auth-modal-overlay--visible');
     });
@@ -79,38 +76,42 @@ export function afterRenderAuthModal(rootElement) {
 
   const loginForm = modalElement.querySelector('[data-login-form]');
   const registerForm = modalElement.querySelector('[data-register-form]');
-  const authMessage = modalElement.querySelector('[data-auth-message]');
 
   if (loginForm) {
     loginForm.addEventListener('submit', async (event) => {
       event.preventDefault();
-      const formData = new FormData(loginForm);
-      const result = await login(formData.get('email')?.toString() || '', formData.get('password')?.toString() || '');
+      if (isSubmitting) return;
+      isSubmitting = true;
 
-      if (authMessage) {
-        authMessage.textContent = result.error || '';
-      }
+      const formData = new FormData(loginForm);
+      await login(
+        formData.get('email')?.toString() || '',
+        formData.get('password')?.toString() || '',
+      );
+
+      isSubmitting = false;
     });
   }
 
   if (registerForm) {
     registerForm.addEventListener('submit', async (event) => {
       event.preventDefault();
+      if (isSubmitting) return;
+      isSubmitting = true;
+
       const formData = new FormData(registerForm);
-      const result = await register({
+      await register({
         username: formData.get('username')?.toString() || '',
         email: formData.get('email')?.toString() || '',
         password: formData.get('password')?.toString() || '',
       });
 
-      if (authMessage) {
-        authMessage.textContent = result.error || getAppState().authMessage || '';
-      }
+      isSubmitting = false;
     });
   }
 }
 
 export function resetAuthModalTracking() {
-  lastRenderedMode = null;
   lastRenderedOpen = false;
+  isSubmitting = false;
 }
