@@ -1,6 +1,6 @@
 import './header.css';
 import { LampIcon, LogInIcon, LogOutIcon, MapPinIcon } from '../icons.js';
-import { getAppState, logout, openAuthModal, setDashboardView } from '../../lib/app-store.js';
+import { getAppState, logout, setDashboardView } from '../../lib/app-store.js';
 
 function navLink(label, view, activeView) {
   return `
@@ -53,10 +53,6 @@ export function afterRenderHeader(rootElement) {
     button.addEventListener('click', () => {
       setDashboardView(button.dataset.view);
     });
-  });
-
-  rootElement.querySelector('[data-action="open-auth"]')?.addEventListener('click', () => {
-    openAuthModal('login');
   });
 
   rootElement.querySelector('[data-action="logout"]')?.addEventListener('click', () => {

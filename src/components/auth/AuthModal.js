@@ -3,7 +3,8 @@ import { createRegisterForm } from './RegisterForm.js';
 import './auth-modal.css';
 import { closeAuthModal, getAppState, login, register, setAuthMode } from '../../lib/app-store.js';
 
-let activeAuthModal = null;
+let lastRenderedMode = null;
+let lastRenderedOpen = false;
 
 function renderAuthBody(state) {
   return state.authMode === 'register' ? createRegisterForm() : createLoginForm();
@@ -12,31 +13,27 @@ function renderAuthBody(state) {
 export function createAuthModal() {
   const state = getAppState();
 
-  if (!state.authModalOpen && !state.authMessage) {
+  if (!state.authModalOpen) {
     return '';
   }
 
   return `
-    <div class="modal fade auth-modal" data-auth-modal tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-          <div class="modal-header px-4 pt-4 pb-3">
-            <div>
-              <p class="text-uppercase small mb-1 text-warning fw-semibold">Burnt out Lamps Map</p>
-              <h2 class="h4 mb-0">${state.authMode === 'register' ? 'Create an account' : 'Welcome back'}</h2>
-            </div>
-            <button type="button" class="btn-close btn-close-white" data-auth-close aria-label="Close"></button>
+    <div class="auth-modal-overlay" data-auth-modal>
+      <div class="auth-modal">
+        <div class="auth-modal__header">
+          <div>
+            <p class="auth-modal__eyebrow">Burnt out Lamps Map</p>
+            <h2 class="auth-modal__title">${state.authMode === 'register' ? 'Create an account' : 'Welcome back'}</h2>
           </div>
-          <div class="modal-body px-4 pb-4">
-            <div class="auth-modal__tabs mb-2">
-              <button class="auth-modal__tab ${state.authMode === 'login' ? 'is-active' : ''}" type="button" data-auth-mode="login">Sign in</button>
-              <button class="auth-modal__tab ${state.authMode === 'register' ? 'is-active' : ''}" type="button" data-auth-mode="register">Register</button>
-            </div>
-            <p class="auth-modal__message" data-auth-message>${state.authMessage || ''}</p>
-            <div class="auth-modal__body">
-              ${renderAuthBody(state)}
-            </div>
+          <button type="button" class="auth-modal__close" data-auth-close aria-label="Close">&times;</button>
+        </div>
+        <div class="auth-modal__body">
+          <div class="auth-modal__tabs">
+            <button class="auth-modal__tab ${state.authMode === 'login' ? 'is-active' : ''}" type="button" data-auth-mode="login">Sign in</button>
+            <button class="auth-modal__tab ${state.authMode === 'register' ? 'is-active' : ''}" type="button" data-auth-mode="register">Register</button>
           </div>
+          <p class="auth-modal__message" data-auth-message>${state.authMessage || ''}</p>
+          ${renderAuthBody(state)}
         </div>
       </div>
     </div>
@@ -47,30 +44,33 @@ export function afterRenderAuthModal(rootElement) {
   const modalElement = rootElement.querySelector('[data-auth-modal]');
 
   if (!modalElement) {
+    lastRenderedOpen = false;
     return;
   }
 
-  if (activeAuthModal) {
-    activeAuthModal.hide();
-    activeAuthModal.dispose();
+  const state = getAppState();
+  const modeChanged = lastRenderedMode !== state.authMode;
+  const justOpened = !lastRenderedOpen;
+
+  lastRenderedMode = state.authMode;
+  lastRenderedOpen = true;
+
+  if (justOpened) {
+    modalElement.classList.add('auth-modal-overlay--enter');
+    requestAnimationFrame(() => {
+      modalElement.classList.add('auth-modal-overlay--visible');
+    });
   }
 
-  const bootstrapModal = window.bootstrap?.Modal;
-  if (bootstrapModal) {
-    activeAuthModal = bootstrapModal.getOrCreateInstance(modalElement, {
-      backdrop: true,
-      focus: true,
-      keyboard: true,
-    });
-
-    modalElement.addEventListener('hidden.bs.modal', () => {
+  modalElement.addEventListener('click', (event) => {
+    if (event.target === modalElement) {
       closeAuthModal();
-    });
-
-    if (getAppState().authModalOpen) {
-      activeAuthModal.show();
     }
-  }
+  });
+
+  modalElement.querySelector('[data-auth-close]')?.addEventListener('click', () => {
+    closeAuthModal();
+  });
 
   modalElement.querySelectorAll('[data-auth-mode]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -78,15 +78,11 @@ export function afterRenderAuthModal(rootElement) {
     });
   });
 
-  modalElement.querySelector('[data-auth-close]')?.addEventListener('click', () => {
-    closeAuthModal();
-  });
-
   const loginForm = modalElement.querySelector('[data-login-form]');
   const registerForm = modalElement.querySelector('[data-register-form]');
   const authMessage = modalElement.querySelector('[data-auth-message]');
 
-  if (loginForm) {
+  if (loginForm && modeChanged) {
     loginForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const formData = new FormData(loginForm);
@@ -98,7 +94,7 @@ export function afterRenderAuthModal(rootElement) {
     });
   }
 
-  if (registerForm) {
+  if (registerForm && modeChanged) {
     registerForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const formData = new FormData(registerForm);
@@ -113,4 +109,9 @@ export function afterRenderAuthModal(rootElement) {
       }
     });
   }
+}
+
+export function resetAuthModalTracking() {
+  lastRenderedMode = null;
+  lastRenderedOpen = false;
 }
