@@ -79,6 +79,20 @@ export function createBulgariaMap() {
   `;
 }
 
+export function destroyBulgariaMap() {
+  if (activeMap) {
+    try {
+      activeMap.remove();
+    } catch {
+      // container already detached from DOM
+    }
+  }
+  activeMap = null;
+  markersLayer = null;
+  markersByLampId = new Map();
+  visitorTooltip = null;
+}
+
 export function afterRenderBulgariaMap(rootElement) {
   const mapElement = rootElement.querySelector('[data-bulgaria-map]');
   const hintElement = rootElement.querySelector('[data-map-hint]');
@@ -88,11 +102,11 @@ export function afterRenderBulgariaMap(rootElement) {
     return;
   }
 
-  if (activeMap) {
-    activeMap.remove();
-    activeMap = null;
-    markersLayer = null;
-    markersByLampId = new Map();
+  destroyBulgariaMap();
+
+  const mapPane = mapElement.closest('[data-layout-pane]');
+  if (mapPane && mapPane.classList.contains('is-hidden')) {
+    return;
   }
 
   activeMap = L.map(mapElement, {

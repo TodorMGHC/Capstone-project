@@ -4,6 +4,7 @@ import { createHeader, afterRenderHeader } from './components/layout/Header.js';
 import { createHomePage } from './pages/HomePage.js';
 import { createLoginPage, afterRenderLoginPage } from './pages/LoginPage.js';
 import { createDashboardPage, afterRenderDashboardPage } from './pages/DashboardPage.js';
+import { destroyBulgariaMap } from './components/map/BulgariaMap.js';
 import { getAppState, initializeAppState, openAuthModal, selectLamp, setDashboardView, subscribe } from './lib/app-store.js';
 
 let appRoot = null;
@@ -92,6 +93,10 @@ function renderApp() {
   lastSyncedPath = location.pathname;
 
   const pageMarkup = getPageMarkup(route);
+
+  if (appRoot.querySelector('[data-bulgaria-map]')) {
+    destroyBulgariaMap();
+  }
 
   appRoot.innerHTML = `
     <div class="app-shell d-flex flex-column min-vh-100">
