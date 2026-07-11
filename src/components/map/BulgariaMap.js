@@ -1,8 +1,5 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png?url';
-import markerIcon from 'leaflet/dist/images/marker-icon.png?url';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png?url';
 
 import './bulgaria-map.css';
 import { getAppState, openCreateLampForm, selectLamp, setSelectedLampId } from '../../lib/app-store.js';
@@ -10,25 +7,27 @@ import { escapeHtml } from '../../utils/escape-html.js';
 
 let activeMap = null;
 let markersLayer = null;
-
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: markerIcon2x,
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
-});
+let markersByLampId = new Map();
+let visitorTooltip = null;
 
 const BULGARIA_CENTER = [42.7, 25.5];
 
-function createLampDivIcon() {
+function lampIconSvg() {
+  return `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M9 18h6" />
+      <path d="M10 22h4" />
+      <path d="M12 2a5 5 0 0 0-3 9v3h6V11a5 5 0 0 0-3-9Z" />
+    </svg>
+  `;
+}
+
+function createLampDivIcon(isSelected = false) {
   return L.divIcon({
-    className: 'lamp-marker-wrapper',
+    className: `lamp-marker-wrapper${isSelected ? ' lamp-marker-wrapper--selected' : ''}`,
     html: `
-      <div class="lamp-marker" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 18h6" />
-          <path d="M10 22h4" />
-          <path d="M12 2a5 5 0 0 0-3 9v3h6V11a5 5 0 0 0-3-9Z" />
-        </svg>
+      <div class="lamp-marker${isSelected ? ' lamp-marker--selected' : ''}" aria-hidden="true">
+        ${lampIconSvg()}
       </div>
     `,
     iconSize: [32, 32],
@@ -81,6 +80,7 @@ export function afterRenderBulgariaMap(rootElement) {
     activeMap.remove();
     activeMap = null;
     markersLayer = null;
+    markersByLampId = new Map();
   }
 
   activeMap = L.map(mapElement, {
@@ -96,24 +96,31 @@ export function afterRenderBulgariaMap(rootElement) {
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
     maxZoom: 19,
+    className: 'warm-tiles',
   }).addTo(activeMap);
 
   const bounds = [];
-  const icon = createLampDivIcon();
-  const markersByLampId = new Map();
+  const defaultIcon = createLampDivIcon(false);
+  const selectedIcon = createLampDivIcon(true);
 
   state.lamps.forEach((lamp) => {
+    const isSelected = lamp.id === state.selectedLampId;
+    const icon = isSelected ? selectedIcon : defaultIcon;
     const marker = L.marker([lamp.latitude, lamp.longitude], { icon }).addTo(markersLayer);
     markersByLampId.set(lamp.id, marker);
+
     marker.bindPopup(`
-      <div style="min-width: 180px">
-        <strong>${escapeHtml(lamp.title)}</strong><br />
-        <span>${escapeHtml(lamp.comments || 'No comments yet.')}</span>
+      <div class="lamp-popup">
+        <strong class="lamp-popup__title">${escapeHtml(lamp.title)}</strong>
+        <p class="lamp-popup__comments">${escapeHtml(lamp.comments || 'No comments yet.')}</p>
+        <small class="lamp-popup__coords">${formatLampCoordinate(lamp.latitude)}, ${formatLampCoordinate(lamp.longitude)}</small>
       </div>
     `);
+
     marker.on('click', () => {
       selectLamp(lamp.id);
     });
+
     bounds.push([lamp.latitude, lamp.longitude]);
   });
 
@@ -121,7 +128,11 @@ export function afterRenderBulgariaMap(rootElement) {
 
   if (selectedLamp) {
     activeMap.setView([selectedLamp.latitude, selectedLamp.longitude], Math.max(activeMap.getZoom(), 11));
-    markersByLampId.get(selectedLamp.id)?.openPopup();
+    const selectedMarker = markersByLampId.get(selectedLamp.id);
+    if (selectedMarker) {
+      selectedMarker.setIcon(selectedIcon);
+      selectedMarker.openPopup();
+    }
   } else if (bounds.length) {
     activeMap.fitBounds(bounds, { padding: [36, 36], maxZoom: 11 });
   }
@@ -130,7 +141,25 @@ export function afterRenderBulgariaMap(rootElement) {
     if (!state.session) {
       if (hintElement) {
         hintElement.textContent = 'Sign in to add lamps.';
+        hintElement.classList.add('bulgaria-map__hint--warn');
       }
+
+      if (visitorTooltip) {
+        visitorTooltip.remove();
+      }
+
+      visitorTooltip = L.tooltip()
+        .setLatLng(event.latlng)
+        .setContent('Sign in to add lamps')
+        .addTo(activeMap);
+
+      setTimeout(() => {
+        if (visitorTooltip) {
+          visitorTooltip.remove();
+          visitorTooltip = null;
+        }
+      }, 2500);
+
       return;
     }
 
@@ -142,6 +171,7 @@ export function afterRenderBulgariaMap(rootElement) {
 
     if (hintElement) {
       hintElement.textContent = `Draft lamp location set to ${latitude}, ${longitude}.`;
+      hintElement.classList.remove('bulgaria-map__hint--warn');
     }
   });
 
