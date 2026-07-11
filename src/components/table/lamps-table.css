@@ -87,3 +87,55 @@
   font-size: 0.85rem;
   font-weight: 700;
 }
+
+.lamp-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid rgba(132, 87, 30, 0.16);
+  border-radius: 0.6rem;
+  background: rgba(255, 248, 236, 0.96);
+  color: #8c5a35;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+}
+
+.lamp-icon-btn svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.lamp-icon-btn:hover {
+  background: rgba(245, 158, 11, 0.16);
+  color: #1f1304;
+  border-color: rgba(245, 158, 11, 0.4);
+  transform: translateY(-1px);
+}
+
+.lamp-icon-btn:active {
+  transform: translateY(0);
+}
+
+.lamp-icon-btn--warning {
+  color: #b45309;
+  border-color: rgba(180, 83, 9, 0.22);
+}
+
+.lamp-icon-btn--warning:hover {
+  background: rgba(245, 158, 11, 0.22);
+  color: #7c2d12;
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
+.lamp-icon-btn--danger {
+  color: #b91c1c;
+  border-color: rgba(185, 28, 28, 0.18);
+}
+
+.lamp-icon-btn--danger:hover {
+  background: rgba(220, 38, 38, 0.12);
+  color: #7f1d1d;
+  border-color: rgba(220, 38, 38, 0.4);
+}

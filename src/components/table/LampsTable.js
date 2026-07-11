@@ -1,6 +1,6 @@
 import './lamps-table.css';
-import { getAppState, canManageLamp, openEditLampForm, removeLamp, selectLamp } from '../../lib/app-store.js';
-import { PencilIcon, TrashIcon, MapPinIcon } from '../icons.js';
+import { canManageLamp, getAppState, openEditLampForm, removeLamp, selectLamp, setDashboardView } from '../../lib/app-store.js';
+import { EyeIcon, MapPinIcon, PencilIcon, TrashIcon } from '../icons.js';
 import { escapeHtml } from '../../utils/escape-html.js';
 
 function formatDate(value) {
@@ -18,7 +18,7 @@ export function createLampsTable() {
     <section class="lamps-table-panel">
       <div>
         <h2 class="lamps-table-panel__title h4 mb-0">Lamp reports table</h2>
-        <p class="lamps-table-panel__subtitle mb-0">Click a row to select the lamp and keep the map in sync.</p>
+        <p class="lamps-table-panel__subtitle mb-0">Click a row to locate it on the map. Use the icons to view, edit, or delete a report.</p>
       </div>
       <div class="lamps-table-wrap table-responsive">
         <table class="table align-middle lamps-table mb-0">
@@ -52,16 +52,9 @@ export function createLampsTable() {
                     <td>${escapeHtml(formatDate(lamp.created_at))}</td>
                     <td>
                       <div class="lamps-table__actions">
-                        ${editable
-                          ? `
-                            <button class="btn btn-outline-warning btn-sm" type="button" data-lamp-action="edit" data-lamp-id="${escapeHtml(lamp.id)}">
-                              <span class="me-1">${PencilIcon()}</span>Edit
-                            </button>
-                            <button class="btn btn-outline-danger btn-sm" type="button" data-lamp-action="delete" data-lamp-id="${escapeHtml(lamp.id)}">
-                              <span class="me-1">${TrashIcon()}</span>Delete
-                            </button>
-                          `
-                          : '<span class="text-body-secondary">View only</span>'}
+                        <button class="lamp-icon-btn" type="button" data-lamp-action="view" data-lamp-id="${escapeHtml(lamp.id)}" title="Show on map" aria-label="Show on map">${EyeIcon()}</button>
+                        ${editable ? `<button class="lamp-icon-btn lamp-icon-btn--warning" type="button" data-lamp-action="edit" data-lamp-id="${escapeHtml(lamp.id)}" title="Edit lamp" aria-label="Edit lamp">${PencilIcon()}</button>` : ''}
+                        ${editable ? `<button class="lamp-icon-btn lamp-icon-btn--danger" type="button" data-lamp-action="delete" data-lamp-id="${escapeHtml(lamp.id)}" title="Delete lamp" aria-label="Delete lamp">${TrashIcon()}</button>` : ''}
                       </div>
                     </td>
                   </tr>
@@ -88,6 +81,7 @@ export function afterRenderLampsTable(rootElement) {
       const lampId = row.dataset.lampId;
       if (lampId) {
         selectLamp(lampId);
+        setDashboardView('map');
       }
     });
 
@@ -95,6 +89,7 @@ export function afterRenderLampsTable(rootElement) {
       if ((event.key === 'Enter' || event.key === ' ') && row.dataset.lampId) {
         event.preventDefault();
         selectLamp(row.dataset.lampId);
+        setDashboardView('map');
       }
     });
   });
@@ -105,6 +100,12 @@ export function afterRenderLampsTable(rootElement) {
       const lampId = button.dataset.lampId;
 
       if (!lampId) {
+        return;
+      }
+
+      if (button.dataset.lampAction === 'view') {
+        selectLamp(lampId);
+        setDashboardView('map');
         return;
       }
 

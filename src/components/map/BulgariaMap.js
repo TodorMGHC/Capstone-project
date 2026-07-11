@@ -2,8 +2,9 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 import './bulgaria-map.css';
-import { getAppState, openCreateLampForm, selectLamp, setSelectedLampId } from '../../lib/app-store.js';
+import { canManageLamp, getAppState, openCreateLampForm, openEditLampForm, removeLamp, selectLamp, setDashboardView, setSelectedLampId } from '../../lib/app-store.js';
 import { escapeHtml } from '../../utils/escape-html.js';
+import { EyeIcon, PencilIcon, TrashIcon } from '../icons.js';
 
 let activeMap = null;
 let markersLayer = null;
@@ -37,8 +38,19 @@ function createLampDivIcon(isSelected = false) {
   });
 }
 
-function formatLampCoordinate(value) {
-  return Number(value).toFixed(6);
+function buildPopupContent(lamp, editable) {
+  return `
+    <div class="lamp-popup" data-lamp-popup data-popup-lamp-id="${escapeHtml(lamp.id)}">
+      <strong class="lamp-popup__title">${escapeHtml(lamp.title)}</strong>
+      <p class="lamp-popup__comments">${escapeHtml(lamp.comments || 'No comments yet.')}</p>
+      <small class="lamp-popup__coords">${formatLampCoordinate(lamp.latitude)}, ${formatLampCoordinate(lamp.longitude)}</small>
+      <div class="lamp-popup__actions">
+        <button class="lamp-icon-btn" type="button" data-popup-action="view" data-lamp-id="${escapeHtml(lamp.id)}" title="View in table" aria-label="View in table">${EyeIcon()}</button>
+        ${editable ? `<button class="lamp-icon-btn lamp-icon-btn--warning" type="button" data-popup-action="edit" data-lamp-id="${escapeHtml(lamp.id)}" title="Edit lamp" aria-label="Edit lamp">${PencilIcon()}</button>` : ''}
+        ${editable ? `<button class="lamp-icon-btn lamp-icon-btn--danger" type="button" data-popup-action="delete" data-lamp-id="${escapeHtml(lamp.id)}" title="Delete lamp" aria-label="Delete lamp">${TrashIcon()}</button>` : ''}
+      </div>
+    </div>
+  `;
 }
 
 export function createBulgariaMap() {
@@ -109,13 +121,8 @@ export function afterRenderBulgariaMap(rootElement) {
     const marker = L.marker([lamp.latitude, lamp.longitude], { icon }).addTo(markersLayer);
     markersByLampId.set(lamp.id, marker);
 
-    marker.bindPopup(`
-      <div class="lamp-popup">
-        <strong class="lamp-popup__title">${escapeHtml(lamp.title)}</strong>
-        <p class="lamp-popup__comments">${escapeHtml(lamp.comments || 'No comments yet.')}</p>
-        <small class="lamp-popup__coords">${formatLampCoordinate(lamp.latitude)}, ${formatLampCoordinate(lamp.longitude)}</small>
-      </div>
-    `);
+    const editable = canManageLamp(lamp);
+    marker.bindPopup(buildPopupContent(lamp, editable));
 
     marker.on('click', () => {
       selectLamp(lamp.id);
@@ -173,6 +180,47 @@ export function afterRenderBulgariaMap(rootElement) {
       hintElement.textContent = `Draft lamp location set to ${latitude}, ${longitude}.`;
       hintElement.classList.remove('bulgaria-map__hint--warn');
     }
+  });
+
+  activeMap.on('popupopen', (event) => {
+    const popupContent = event.popup.getElement()?.querySelector('[data-lamp-popup]');
+    if (!popupContent) {
+      return;
+    }
+
+    popupContent.querySelectorAll('[data-popup-action]').forEach((button) => {
+      button.addEventListener('click', async (ev) => {
+        ev.stopPropagation();
+        const lampId = button.dataset.lampId;
+        const action = button.dataset.popupAction;
+        if (!lampId) {
+          return;
+        }
+
+        if (action === 'view') {
+          selectLamp(lampId);
+          setDashboardView('table');
+          activeMap.closePopup();
+          return;
+        }
+
+        if (action === 'edit') {
+          selectLamp(lampId);
+          openEditLampForm(lampId);
+          activeMap.closePopup();
+          return;
+        }
+
+        if (action === 'delete') {
+          const confirmed = window.confirm('Delete this lamp report?');
+          if (!confirmed) {
+            return;
+          }
+          await removeLamp(lampId);
+          activeMap.closePopup();
+        }
+      });
+    });
   });
 
   requestAnimationFrame(() => {
