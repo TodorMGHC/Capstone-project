@@ -1,6 +1,6 @@
 import './lamp-form.css';
 import { Modal } from 'bootstrap';
-import { closeLampForm, getAppState, saveLamp } from '../../lib/app-store.js';
+import { closeLampForm, getAppState, saveLamp, startLampCoordinatePick } from '../../lib/app-store.js';
 
 let activeLampModal = null;
 
@@ -56,6 +56,7 @@ export function createLampForm() {
               </div>
               <p class="lamp-form__status" data-lamp-status aria-live="polite">${state.lampFormError || ''}</p>
               <div class="d-flex flex-wrap gap-2 justify-content-end pt-2">
+                ${isEditing ? '' : '<button class="btn btn-outline-warning" type="button" data-lamp-view-map>View map</button>'}
                 <button class="btn btn-outline-secondary" type="button" data-lamp-cancel>Cancel</button>
                 <button class="btn btn-warning fw-semibold" type="submit">${isEditing ? 'Save changes' : 'Add lamp'}</button>
               </div>
@@ -96,6 +97,11 @@ export function afterRenderLampForm(rootElement) {
 
   modalElement.querySelector('[data-lamp-cancel]')?.addEventListener('click', () => {
     closeLampForm();
+  });
+
+  modalElement.querySelector('[data-lamp-view-map]')?.addEventListener('click', () => {
+    closeLampForm();
+    startLampCoordinatePick();
   });
 
   const form = modalElement.querySelector('[data-lamp-form]');

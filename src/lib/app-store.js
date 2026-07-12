@@ -15,6 +15,7 @@ const state = {
   authMessage: '',
   lampFormError: '',
   dashboardView: 'map',
+  awaitingCoordinates: false,
 };
 
 const listeners = new Set();
@@ -243,7 +244,21 @@ export function openCreateLampForm(latitude, longitude) {
     },
     lampFormError: '',
     selectedLampId: null,
+    awaitingCoordinates: false,
   });
+}
+
+export function startLampCoordinatePick() {
+  setState({
+    awaitingCoordinates: true,
+    draftLocation: null,
+    editingLampId: null,
+    lampFormError: '',
+  });
+}
+
+export function stopLampCoordinatePick() {
+  setState({ awaitingCoordinates: false });
 }
 
 export function openEditLampForm(lampId) {

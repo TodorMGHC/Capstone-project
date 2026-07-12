@@ -2,7 +2,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 import './bulgaria-map.css';
-import { canManageLamp, getAppState, openCreateLampForm, openEditLampForm, removeLamp, selectLamp, setDashboardView, setSelectedLampId } from '../../lib/app-store.js';
+import { canManageLamp, getAppState, openCreateLampForm, openEditLampForm, removeLamp, selectLamp, setDashboardView, setSelectedLampId, stopLampCoordinatePick } from '../../lib/app-store.js';
 import { escapeHtml } from '../../utils/escape-html.js';
 import { EyeIcon, PencilIcon, TrashIcon } from '../icons.js';
 
@@ -38,6 +38,10 @@ function createLampDivIcon(isSelected = false) {
   });
 }
 
+function formatLampCoordinate(value) {
+  return Number(value).toFixed(6);
+}
+
 function buildPopupContent(lamp, editable) {
   return `
     <div class="lamp-popup" data-lamp-popup data-popup-lamp-id="${escapeHtml(lamp.id)}">
@@ -61,10 +65,10 @@ export function createBulgariaMap() {
     <section class="bulgaria-map-panel">
       <div class="bulgaria-map-panel__meta">
         <h2 class="bulgaria-map-panel__title h4 mb-0">Lamp map of Bulgaria</h2>
-        <p class="bulgaria-map-panel__subtitle mb-0">Click the map to add a lamp report. Click a marker to focus the matching row in the table.</p>
+        <p class="bulgaria-map-panel__subtitle mb-0">${state.awaitingCoordinates ? 'Click the map to choose coordinates for the new lamp report.' : 'Click the map to add a lamp report. Click a marker to focus the matching row in the table.'}</p>
       </div>
       <div class="bulgaria-map-stage" data-bulgaria-map></div>
-      <p class="bulgaria-map__hint" data-map-hint>${state.session ? 'Click anywhere on the map to open a new lamp report.' : 'Sign in to add lamps.'}</p>
+      <p class="bulgaria-map__hint ${state.awaitingCoordinates ? 'bulgaria-map__hint--warn' : ''}" data-map-hint>${state.awaitingCoordinates ? 'Pick a point on the map to fill latitude and longitude.' : state.session ? 'Click anywhere on the map to open a new lamp report.' : 'Sign in to add lamps.'}</p>
       ${selectedLamp
         ? `
           <div class="bulgaria-map__selected">
@@ -132,42 +136,7 @@ export function afterRenderBulgariaMap(rootElement) {
   const defaultIcon = createLampDivIcon(false);
   const selectedIcon = createLampDivIcon(true);
 
-  state.lamps.forEach((lamp) => {
-    const isSelected = lamp.id === state.selectedLampId;
-    const icon = isSelected ? selectedIcon : defaultIcon;
-    const marker = L.marker([lamp.latitude, lamp.longitude], { icon }).addTo(markersLayer);
-    markersByLampId.set(lamp.id, marker);
-
-    const editable = canManageLamp(lamp);
-    marker.bindPopup(buildPopupContent(lamp, editable));
-
-    marker.on('click', () => {
-      setTimeout(() => selectLamp(lamp.id), 0);
-    });
-
-    bounds.push([lamp.latitude, lamp.longitude]);
-  });
-
-  const selectedLamp = state.lamps.find((lamp) => lamp.id === state.selectedLampId) ?? null;
-
-  if (selectedLamp) {
-    activeMap.setView([selectedLamp.latitude, selectedLamp.longitude], Math.max(activeMap.getZoom(), 11), { animate: false });
-    const selectedMarker = markersByLampId.get(selectedLamp.id);
-    if (selectedMarker) {
-      selectedMarker.setIcon(selectedIcon);
-      selectedMarker.openPopup();
-    }
-  } else if (bounds.length) {
-    activeMap.fitBounds(bounds, { padding: [36, 36], maxZoom: 11, animate: false });
-  }
-
-  mapElement.addEventListener('click', (event) => {
-    if (event.target.closest('.leaflet-control, .leaflet-marker-icon, .leaflet-popup')) {
-      return;
-    }
-
-    const clickPoint = activeMap.mouseEventToLatLng(event);
-
+  const handleMapPick = (clickPoint) => {
     if (!getAppState().session) {
       if (hintElement) {
         hintElement.textContent = 'Sign in to add lamps.';
@@ -201,7 +170,49 @@ export function afterRenderBulgariaMap(rootElement) {
       hintElement.classList.remove('bulgaria-map__hint--warn');
     }
 
+    stopLampCoordinatePick();
     openCreateLampForm(latitude, longitude);
+  };
+
+  state.lamps.forEach((lamp) => {
+    const isSelected = lamp.id === state.selectedLampId;
+    const icon = isSelected ? selectedIcon : defaultIcon;
+    const marker = L.marker([lamp.latitude, lamp.longitude], { icon }).addTo(markersLayer);
+    markersByLampId.set(lamp.id, marker);
+
+    const editable = canManageLamp(lamp);
+    marker.bindPopup(buildPopupContent(lamp, editable));
+
+    marker.on('click', () => {
+      setTimeout(() => selectLamp(lamp.id), 0);
+    });
+
+    bounds.push([lamp.latitude, lamp.longitude]);
+  });
+
+  const selectedLamp = state.lamps.find((lamp) => lamp.id === state.selectedLampId) ?? null;
+
+  if (selectedLamp) {
+    activeMap.setView([selectedLamp.latitude, selectedLamp.longitude], Math.max(activeMap.getZoom(), 11), { animate: false });
+    const selectedMarker = markersByLampId.get(selectedLamp.id);
+    if (selectedMarker) {
+      selectedMarker.setIcon(selectedIcon);
+      selectedMarker.openPopup();
+    }
+  } else if (bounds.length) {
+    activeMap.fitBounds(bounds, { padding: [36, 36], maxZoom: 11, animate: false });
+  }
+
+  activeMap.on('click', (event) => {
+    handleMapPick(event.latlng);
+  });
+
+  mapElement.addEventListener('click', (event) => {
+    if (event.target.closest('.leaflet-control, .leaflet-marker-icon, .leaflet-popup')) {
+      return;
+    }
+
+    handleMapPick(activeMap.mouseEventToLatLng(event));
   });
 
   activeMap.on('popupopen', (event) => {
