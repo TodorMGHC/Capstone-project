@@ -68,6 +68,7 @@ Deno.serve(async (req: Request) => {
   const username = String(body?.username ?? "").trim();
   const email = String(body?.email ?? "").trim().toLowerCase();
   const password = String(body?.password ?? "").trim();
+  const phone = String(body?.phone ?? "").trim();
   const role = String(body?.role ?? "user").trim();
 
   if (!username || !email || !password) {
@@ -104,12 +105,25 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: profileUpsertError.message }, 400);
   }
 
+  if (phone) {
+    const { error: phoneInsertError } = await adminClient.from("phones").insert({
+      userID: createdUserData.user.id,
+      phone,
+    });
+
+    if (phoneInsertError) {
+      await adminClient.auth.admin.deleteUser(createdUserData.user.id);
+      return jsonResponse({ error: phoneInsertError.message }, 400);
+    }
+  }
+
   return jsonResponse({
     success: true,
     user: {
       id: createdUserData.user.id,
       email: createdUserData.user.email,
       username,
+      phone: phone || null,
       role,
     },
   });

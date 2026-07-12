@@ -70,6 +70,7 @@ Deno.serve(async (req: Request) => {
   const role = String(body?.role ?? "").trim();
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   const password = typeof body?.password === "string" ? body.password.trim() : "";
+  const phone = typeof body?.phone === "string" ? body.phone.trim() : "";
 
   if (!userId || !username || !role) {
     return jsonResponse({ error: "User ID, username, and role are required." }, 400);
@@ -110,6 +111,26 @@ Deno.serve(async (req: Request) => {
 
   if (profileUpdateError) {
     return jsonResponse({ error: profileUpdateError.message }, 400);
+  }
+
+  const { error: deletePhoneError } = await adminClient
+    .from("phones")
+    .delete()
+    .eq("userID", userId);
+
+  if (deletePhoneError) {
+    return jsonResponse({ error: deletePhoneError.message }, 400);
+  }
+
+  if (phone) {
+    const { error: insertPhoneError } = await adminClient.from("phones").insert({
+      userID: userId,
+      phone,
+    });
+
+    if (insertPhoneError) {
+      return jsonResponse({ error: insertPhoneError.message }, 400);
+    }
   }
 
   return jsonResponse({ success: true });

@@ -60,27 +60,15 @@ function buildPopupContent(lamp, editable) {
 
 export function createBulgariaMap() {
   const state = getAppState();
-  const selectedLamp = state.lamps.find((lamp) => lamp.id === state.selectedLampId) ?? null;
 
   return `
     <section class="bulgaria-map-panel">
       <div class="bulgaria-map-panel__meta">
         <h2 class="bulgaria-map-panel__title h4 mb-0">Lamp map of Bulgaria</h2>
-        <p class="bulgaria-map-panel__subtitle mb-0">${state.awaitingCoordinates ? 'Click the map to choose coordinates for the new lamp report.' : 'Click the map to add a lamp report. Click a marker to focus the matching row in the table.'}</p>
+        <p class="bulgaria-map-panel__subtitle mb-0">${state.awaitingCoordinates ? 'Double-click the map to choose coordinates for the new lamp report.' : 'Double-click the map to add a lamp report. Click a marker to focus the matching row in the table.'}</p>
       </div>
       <div class="bulgaria-map-stage" data-bulgaria-map></div>
-      <p class="bulgaria-map__hint ${state.awaitingCoordinates ? 'bulgaria-map__hint--warn' : ''}" data-map-hint>${state.awaitingCoordinates ? 'Pick a point on the map to fill latitude and longitude.' : state.session ? 'Click anywhere on the map to open a new lamp report.' : 'Sign in to add lamps.'}</p>
-      ${selectedLamp
-        ? `
-          <div class="bulgaria-map__selected">
-            <span class="bulgaria-map__selected-label">Selected lamp</span>
-            <h3 class="h5 mb-1">${escapeHtml(selectedLamp.title)}</h3>
-            ${selectedLamp.cover_image_url ? `<img class="bulgaria-map__selected-image" src="${escapeHtml(selectedLamp.cover_image_url)}" alt="Cover for ${escapeHtml(selectedLamp.title)}" />` : ''}
-            <p class="mb-1 text-body-secondary">${escapeHtml(selectedLamp.comments || 'No comments yet.')}</p>
-            <small class="text-body-secondary">${formatLampCoordinate(selectedLamp.latitude)}, ${formatLampCoordinate(selectedLamp.longitude)}</small>
-          </div>
-        `
-        : ''}
+      <p class="bulgaria-map__hint ${state.awaitingCoordinates ? 'bulgaria-map__hint--warn' : ''}" data-map-hint>${state.awaitingCoordinates ? 'Double-click a point on the map to fill latitude and longitude.' : state.session ? 'Double-click anywhere on the map to open a new lamp report.' : 'Sign in to add lamps.'}</p>
     </section>
   `;
 }
@@ -121,6 +109,7 @@ export function afterRenderBulgariaMap(rootElement) {
     zoom: 7,
     zoomControl: true,
     scrollWheelZoom: true,
+    doubleClickZoom: false,
     preferCanvas: true,
     zoomAnimation: false,
     fadeAnimation: false,
@@ -254,11 +243,11 @@ export function afterRenderBulgariaMap(rootElement) {
     activeMap.fitBounds(bounds, { padding: [36, 36], maxZoom: 11, animate: false });
   }
 
-  activeMap.on('click', (event) => {
+  activeMap.on('dblclick', (event) => {
     handleMapPick(event.latlng);
   });
 
-  mapElement.addEventListener('click', (event) => {
+  mapElement.addEventListener('dblclick', (event) => {
     if (event.target.closest('.leaflet-control, .leaflet-marker-icon, .leaflet-popup')) {
       return;
     }

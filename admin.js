@@ -324,6 +324,10 @@ function renderCreateUserPopup() {
             <input name="password" type="password" minlength="6" required />
           </label>
           <label>
+            Phone (optional)
+            <input name="phone" type="tel" maxlength="40" placeholder="+359 88 123 4567" />
+          </label>
+          <label>
             Role
             <select name="role" required>
               ${roleOptions('user')}
@@ -363,6 +367,10 @@ function renderEditUserPopup() {
           <label>
             Password (optional)
             <input name="password" type="password" minlength="6" placeholder="Leave blank to keep current password" />
+          </label>
+          <label>
+            Phone (optional)
+            <input name="phone" type="tel" maxlength="40" value="${escapeHtml(user.phone || '')}" placeholder="Leave blank to clear phone" />
           </label>
           <label>
             Role
@@ -514,7 +522,7 @@ async function loadReports() {
 }
 
 async function loadUsers() {
-  const { data, error } = await supabase
+  const { data: users, error } = await supabase
     .from('profiles')
     .select('id, username, role, created_at')
     .order('created_at', { ascending: true });
@@ -523,7 +531,35 @@ async function loadUsers() {
     throw error;
   }
 
-  return data ?? [];
+  const userRows = users ?? [];
+  const userIds = userRows.map((user) => user.id);
+
+  if (!userIds.length) {
+    return userRows;
+  }
+
+  const { data: phones, error: phonesError } = await supabase
+    .from('phones')
+    .select('userID, phone')
+    .in('userID', userIds);
+
+  if (phonesError) {
+    throw phonesError;
+  }
+
+  const phoneByUserId = new Map();
+  for (const row of phones ?? []) {
+    if (!row?.userID || typeof row.phone !== 'string') {
+      continue;
+    }
+
+    phoneByUserId.set(row.userID, row.phone);
+  }
+
+  return userRows.map((user) => ({
+    ...user,
+    phone: phoneByUserId.get(user.id) ?? '',
+  }));
 }
 
 async function refreshData() {
@@ -642,7 +678,9 @@ async function createUser(formElement) {
   const username = String(formData.get('username') || '').trim();
   const email = String(formData.get('email') || '').trim();
   const password = String(formData.get('password') || '').trim();
+  const phoneRaw = String(formData.get('phone') || '').trim();
   const role = String(formData.get('role') || 'user').trim();
+  const phone = phoneRaw || null;
 
   if (!username || !email || !password || !role) {
     setState({ error: 'Username, email, password, and role are required.' });
@@ -655,6 +693,7 @@ async function createUser(formElement) {
     username,
     email,
     password,
+    phone,
     role,
   });
 
@@ -677,9 +716,11 @@ async function saveUser(formElement) {
   const username = String(formData.get('username') || '').trim();
   const emailRaw = String(formData.get('email') || '').trim();
   const passwordRaw = String(formData.get('password') || '').trim();
+  const phoneRaw = String(formData.get('phone') || '').trim();
   const role = String(formData.get('role') || 'user').trim();
   const email = emailRaw || null;
   const password = passwordRaw || null;
+  const phone = phoneRaw || null;
 
   if (!userId || !username || !role) {
     setState({ error: 'User ID, username, and role are required.' });
@@ -694,6 +735,7 @@ async function saveUser(formElement) {
     role,
     email,
     password,
+    phone,
   });
 
   if (result.error) {
