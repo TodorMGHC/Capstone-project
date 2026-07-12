@@ -190,51 +190,53 @@ export function afterRenderBulgariaMap(rootElement) {
     bounds.push([lamp.latitude, lamp.longitude]);
   });
 
-  activeMap.on('popupopen', (event) => {
-    const popupContent = event.popup.getElement()?.querySelector('[data-lamp-popup]');
-    if (!popupContent) {
+  mapElement.addEventListener('click', (event) => {
+    const actionButton = event.target.closest('[data-popup-action]');
+    if (!actionButton) {
       return;
     }
 
-    popupContent.querySelectorAll('[data-popup-action]').forEach((button) => {
-      button.addEventListener('click', async (ev) => {
-        ev.stopPropagation();
-        const lampId = button.dataset.lampId;
-        const action = button.dataset.popupAction;
-        if (!lampId) {
-          return;
-        }
+    event.preventDefault();
+    event.stopPropagation();
 
-        if (action === 'view') {
-          activeMap.closePopup();
-          setTimeout(() => {
-            selectLamp(lampId);
-            setDashboardView('table');
-          }, 0);
-          return;
-        }
+    const lampId = actionButton.dataset.lampId;
+    const action = actionButton.dataset.popupAction;
+    if (!lampId) {
+      return;
+    }
 
-        if (action === 'edit') {
-          activeMap.closePopup();
-          setTimeout(() => {
-            selectLamp(lampId);
-            openEditLampForm(lampId);
-          }, 0);
-          return;
-        }
+    if (action === 'view') {
+      activeMap.closePopup();
+      setTimeout(() => {
+        selectLamp(lampId);
+        setDashboardView('table');
+      }, 0);
+      return;
+    }
 
-        if (action === 'delete') {
-          const confirmed = window.confirm('Delete this lamp report?');
-          if (!confirmed) {
-            return;
-          }
-          activeMap.closePopup();
-          setTimeout(() => {
-            void removeLamp(lampId);
-          }, 0);
+    if (action === 'edit') {
+      activeMap.closePopup();
+      setTimeout(() => {
+        selectLamp(lampId);
+        openEditLampForm(lampId);
+      }, 0);
+      return;
+    }
+
+    if (action === 'delete') {
+      const confirmed = window.confirm('Delete this lamp report?');
+      if (!confirmed) {
+        return;
+      }
+
+      activeMap.closePopup();
+      setTimeout(async () => {
+        const result = await removeLamp(lampId);
+        if (result?.error) {
+          window.alert(result.error);
         }
-      });
-    });
+      }, 0);
+    }
   });
 
   const selectedLamp = state.lamps.find((lamp) => lamp.id === state.selectedLampId) ?? null;
