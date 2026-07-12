@@ -46,6 +46,7 @@ function buildPopupContent(lamp, editable) {
   return `
     <div class="lamp-popup" data-lamp-popup data-popup-lamp-id="${escapeHtml(lamp.id)}">
       <strong class="lamp-popup__title">${escapeHtml(lamp.title)}</strong>
+      ${lamp.cover_image_url ? `<img class="lamp-popup__image" src="${escapeHtml(lamp.cover_image_url)}" alt="Cover for ${escapeHtml(lamp.title)}" />` : ''}
       <p class="lamp-popup__comments">${escapeHtml(lamp.comments || 'No comments yet.')}</p>
       <small class="lamp-popup__coords">${formatLampCoordinate(lamp.latitude)}, ${formatLampCoordinate(lamp.longitude)}</small>
       <div class="lamp-popup__actions">
@@ -74,6 +75,7 @@ export function createBulgariaMap() {
           <div class="bulgaria-map__selected">
             <span class="bulgaria-map__selected-label">Selected lamp</span>
             <h3 class="h5 mb-1">${escapeHtml(selectedLamp.title)}</h3>
+            ${selectedLamp.cover_image_url ? `<img class="bulgaria-map__selected-image" src="${escapeHtml(selectedLamp.cover_image_url)}" alt="Cover for ${escapeHtml(selectedLamp.title)}" />` : ''}
             <p class="mb-1 text-body-secondary">${escapeHtml(selectedLamp.comments || 'No comments yet.')}</p>
             <small class="text-body-secondary">${formatLampCoordinate(selectedLamp.latitude)}, ${formatLampCoordinate(selectedLamp.longitude)}</small>
           </div>

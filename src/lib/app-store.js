@@ -1,5 +1,9 @@
 import { supabase } from './supabase.js';
 
+const REPORT_IMAGES_BUCKET = 'lamp-report-images';
+const MAX_COVER_IMAGE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+
 const state = {
   initialized: false,
   loading: true,
@@ -39,6 +43,11 @@ function normalizeLamp(row) {
     return null;
   }
 
+  const coverImagePath = row.cover_image_path ?? '';
+  const { data: publicUrlData } = coverImagePath
+    ? supabase.storage.from(REPORT_IMAGES_BUCKET).getPublicUrl(coverImagePath)
+    : { data: { publicUrl: '' } };
+
   return {
     id: row.id,
     title: row.title,
@@ -48,8 +57,47 @@ function normalizeLamp(row) {
     user_id: row.user_id,
     created_at: row.created_at,
     updated_at: row.updated_at,
+    cover_image_path: coverImagePath,
+    cover_image_url: publicUrlData?.publicUrl ?? '',
     owner: row.profiles ?? null,
   };
+}
+
+function isValidImageFile(file) {
+  return file && typeof file === 'object' && typeof file.size === 'number' && file.size > 0;
+}
+
+function sanitizeFileName(fileName) {
+  const baseName = String(fileName || 'cover-image')
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, '-');
+
+  return baseName || 'cover-image';
+}
+
+async function uploadCoverImage(userId, imageFile) {
+  const uniqueName = `${Date.now()}-${crypto.randomUUID()}-${sanitizeFileName(imageFile.name)}`;
+  const imagePath = `${userId}/${uniqueName}`;
+
+  const { error } = await supabase.storage.from(REPORT_IMAGES_BUCKET).upload(imagePath, imageFile, {
+    upsert: false,
+    cacheControl: '3600',
+    contentType: imageFile.type || 'application/octet-stream',
+  });
+
+  if (error) {
+    return { path: '', error: error.message };
+  }
+
+  return { path: imagePath, error: '' };
+}
+
+async function removeCoverImage(imagePath) {
+  if (!imagePath) {
+    return;
+  }
+
+  await supabase.storage.from(REPORT_IMAGES_BUCKET).remove([imagePath]);
 }
 
 function selectedLampExists() {
@@ -59,7 +107,7 @@ function selectedLampExists() {
 async function fetchLamps() {
   const { data, error } = await supabase
     .from('lamps')
-    .select('id, title, comments, latitude, longitude, user_id, created_at, updated_at')
+    .select('id, title, comments, latitude, longitude, cover_image_path, user_id, created_at, updated_at')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -357,9 +405,22 @@ export async function logout() {
   return { error: '' };
 }
 
-export async function saveLamp({ id, title, comments, latitude, longitude }) {
+export async function saveLamp({ id, title, comments, latitude, longitude, coverImageFile, removeCoverImage: shouldRemoveCoverImage }) {
   if (!state.session?.user?.id) {
     return { error: 'Sign in to add or update lamps.' };
+  }
+
+  const editingLamp = id ? state.lamps.find((lamp) => lamp.id === id) ?? null : null;
+  const existingCoverImagePath = editingLamp?.cover_image_path ?? '';
+
+  if (isValidImageFile(coverImageFile)) {
+    if (coverImageFile.size > MAX_COVER_IMAGE_BYTES) {
+      return { error: 'Cover image must be 5 MB or smaller.' };
+    }
+
+    if (coverImageFile.type && !ALLOWED_IMAGE_TYPES.has(coverImageFile.type)) {
+      return { error: 'Cover image must be JPG, PNG, WEBP, or GIF.' };
+    }
   }
 
   const payload = {
@@ -367,10 +428,26 @@ export async function saveLamp({ id, title, comments, latitude, longitude }) {
     comments: comments.trim(),
     latitude: Number(latitude),
     longitude: Number(longitude),
+    cover_image_path: existingCoverImagePath || null,
   };
 
   if (!payload.title || Number.isNaN(payload.latitude) || Number.isNaN(payload.longitude)) {
     return { error: 'Title, latitude, and longitude are required.' };
+  }
+
+  let uploadedCoverImagePath = '';
+
+  if (isValidImageFile(coverImageFile)) {
+    const uploadResult = await uploadCoverImage(state.session.user.id, coverImageFile);
+    if (uploadResult.error) {
+      setState({ lampFormError: uploadResult.error });
+      return { error: uploadResult.error };
+    }
+
+    uploadedCoverImagePath = uploadResult.path;
+    payload.cover_image_path = uploadedCoverImagePath;
+  } else if (shouldRemoveCoverImage) {
+    payload.cover_image_path = null;
   }
 
   const query = id
@@ -380,8 +457,17 @@ export async function saveLamp({ id, title, comments, latitude, longitude }) {
   const { data, error } = await query;
 
   if (error) {
+    if (uploadedCoverImagePath) {
+      await removeCoverImage(uploadedCoverImagePath);
+    }
+
     setState({ lampFormError: error.message });
     return { error: error.message };
+  }
+
+  const coverPathChanged = Boolean(id) && existingCoverImagePath !== (payload.cover_image_path || '');
+  if (coverPathChanged && existingCoverImagePath) {
+    await removeCoverImage(existingCoverImagePath);
   }
 
   setState({ lampFormError: '', selectedLampId: data?.id ?? id ?? state.selectedLampId });

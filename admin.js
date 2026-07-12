@@ -2,6 +2,10 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { supabase } from './src/lib/supabase.js';
 import { escapeHtml } from './src/utils/escape-html.js';
 
+const REPORT_IMAGES_BUCKET = 'lamp-report-images';
+const MAX_COVER_IMAGE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+
 const appRoot = document.querySelector('#admin-app');
 
 if (!appRoot) {
@@ -48,6 +52,50 @@ function roleOptions(selectedRole) {
     .join('');
 }
 
+function getCoverImageUrl(path) {
+  if (!path) {
+    return '';
+  }
+
+  const { data } = supabase.storage.from(REPORT_IMAGES_BUCKET).getPublicUrl(path);
+  return data?.publicUrl ?? '';
+}
+
+function isValidImageFile(file) {
+  return file && typeof file === 'object' && typeof file.size === 'number' && file.size > 0;
+}
+
+function sanitizeFileName(fileName) {
+  const baseName = String(fileName || 'cover-image')
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, '-');
+
+  return baseName || 'cover-image';
+}
+
+async function uploadReportCoverImage(userId, imageFile) {
+  const imagePath = `${userId}/${Date.now()}-${crypto.randomUUID()}-${sanitizeFileName(imageFile.name)}`;
+  const { error } = await supabase.storage.from(REPORT_IMAGES_BUCKET).upload(imagePath, imageFile, {
+    upsert: false,
+    cacheControl: '3600',
+    contentType: imageFile.type || 'application/octet-stream',
+  });
+
+  if (error) {
+    return { path: '', error: error.message };
+  }
+
+  return { path: imagePath, error: '' };
+}
+
+async function removeReportCoverImage(imagePath) {
+  if (!imagePath) {
+    return;
+  }
+
+  await supabase.storage.from(REPORT_IMAGES_BUCKET).remove([imagePath]);
+}
+
 async function invokeEdgeFunction(functionName, payload) {
   const { data, error } = await supabase.functions.invoke(functionName, {
     body: payload,
@@ -86,6 +134,11 @@ function renderReportsTable() {
       (report) => `
         <tr>
           <td><strong>${escapeHtml(report.title)}</strong></td>
+          <td>
+            ${report.cover_image_url
+              ? `<img class="admin-report-cover" src="${escapeHtml(report.cover_image_url)}" alt="Cover for ${escapeHtml(report.title)}" />`
+              : '<small>-</small>'}
+          </td>
           <td>${escapeHtml(report.comments || '')}</td>
           <td>${Number(report.latitude).toFixed(6)}, ${Number(report.longitude).toFixed(6)}</td>
           <td>${escapeHtml(report.owner_name || report.user_id)}</td>
@@ -107,6 +160,7 @@ function renderReportsTable() {
         <thead>
           <tr>
             <th>Title</th>
+            <th>Cover</th>
             <th>Comments</th>
             <th>Coordinates</th>
             <th>Owner</th>
@@ -181,6 +235,8 @@ function renderEditPopup() {
     return '';
   }
 
+  const canEditImage = report.user_id === state.session?.user?.id;
+
   return `
     <div class="overlay" data-popup="edit-report">
       <div class="popup" role="dialog" aria-modal="true" aria-labelledby="report-edit-title">
@@ -195,6 +251,15 @@ function renderEditPopup() {
             Comments
             <textarea name="comments">${escapeHtml(report.comments || '')}</textarea>
           </label>
+          <label>
+            Cover image (max 5 MB)
+            ${report.cover_image_url ? `<img class="admin-popup-cover" src="${escapeHtml(report.cover_image_url)}" alt="Current report cover" />` : ''}
+            <input name="coverImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif" ${canEditImage ? '' : 'disabled'} />
+          </label>
+          ${report.cover_image_url
+            ? `<label class="admin-popup-check"><input type="checkbox" name="removeCoverImage" ${canEditImage ? '' : 'disabled'} /> Remove current image</label>`
+            : ''}
+          ${canEditImage ? '' : '<p class="muted">Only the image owner can replace or remove the current cover image.</p>'}
           <div class="grid">
             <label>
               Latitude
@@ -417,7 +482,7 @@ async function loadProfile(userId) {
 async function loadReports() {
   const { data: reportRows, error: reportError } = await supabase
     .from('lamps')
-    .select('id, title, comments, latitude, longitude, user_id, created_at')
+    .select('id, title, comments, latitude, longitude, cover_image_path, user_id, created_at')
     .order('created_at', { ascending: false });
 
   if (reportError) {
@@ -443,6 +508,8 @@ async function loadReports() {
   return (reportRows ?? []).map((row) => ({
     ...row,
     owner_name: ownersById.get(row.user_id) ?? '',
+    cover_image_path: row.cover_image_path ?? '',
+    cover_image_url: getCoverImageUrl(row.cover_image_path ?? ''),
   }));
 }
 
@@ -485,22 +552,63 @@ async function saveReport(formElement) {
   const comments = String(formData.get('comments') || '').trim();
   const latitude = Number(formData.get('latitude'));
   const longitude = Number(formData.get('longitude'));
+  const coverImageFile = formData.get('coverImage');
+  const removeCoverImage = formData.get('removeCoverImage') === 'on';
+  const report = reportById(id);
+  const existingCoverImagePath = report?.cover_image_path ?? '';
+  const canEditImage = report?.user_id === state.session?.user?.id;
 
   if (!id || !title || Number.isNaN(latitude) || Number.isNaN(longitude)) {
     setState({ error: 'Title, latitude, and longitude are required.' });
     return;
   }
 
+  if (isValidImageFile(coverImageFile)) {
+    if (coverImageFile.size > MAX_COVER_IMAGE_BYTES) {
+      setState({ error: 'Cover image must be 5 MB or smaller.' });
+      return;
+    }
+
+    if (coverImageFile.type && !ALLOWED_IMAGE_TYPES.has(coverImageFile.type)) {
+      setState({ error: 'Cover image must be JPG, PNG, WEBP, or GIF.' });
+      return;
+    }
+  }
+
   setState({ saving: true, error: '', message: '' });
+
+  let nextCoverImagePath = existingCoverImagePath || null;
+  let uploadedCoverImagePath = '';
+
+  if (canEditImage && isValidImageFile(coverImageFile)) {
+    const uploadResult = await uploadReportCoverImage(state.session.user.id, coverImageFile);
+    if (uploadResult.error) {
+      setState({ saving: false, error: uploadResult.error });
+      return;
+    }
+
+    uploadedCoverImagePath = uploadResult.path;
+    nextCoverImagePath = uploadResult.path;
+  } else if (canEditImage && removeCoverImage) {
+    nextCoverImagePath = null;
+  }
 
   const { error } = await supabase
     .from('lamps')
-    .update({ title, comments, latitude, longitude })
+    .update({ title, comments, latitude, longitude, cover_image_path: nextCoverImagePath })
     .eq('id', id);
 
   if (error) {
+    if (uploadedCoverImagePath) {
+      await removeReportCoverImage(uploadedCoverImagePath);
+    }
+
     setState({ saving: false, error: error.message });
     return;
+  }
+
+  if (canEditImage && existingCoverImagePath && existingCoverImagePath !== (nextCoverImagePath || '')) {
+    await removeReportCoverImage(existingCoverImagePath);
   }
 
   setState({ saving: false, editReportId: null, message: 'Report updated.' });

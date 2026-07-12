@@ -25,6 +25,7 @@ export function createLampsTable() {
           <thead>
             <tr>
               <th>Title</th>
+              <th>Cover</th>
               <th>Location</th>
               <th>Comments</th>
               <th>Owner</th>
@@ -46,6 +47,11 @@ export function createLampsTable() {
                         <span class="lamps-table__badge"><span class="me-1">${MapPinIcon()}</span>Pin</span>
                       </div>
                     </td>
+                    <td>
+                      ${lamp.cover_image_url
+                        ? `<img class="lamps-table__cover" src="${escapeHtml(lamp.cover_image_url)}" alt="Cover for ${escapeHtml(lamp.title)}" />`
+                        : '<span class="text-body-secondary">-</span>'}
+                    </td>
                     <td class="lamps-table__location">${formatCoordinates(lamp)}</td>
                     <td class="lamps-table__comment">${escapeHtml(lamp.comments || 'No comments yet.')}</td>
                     <td>${escapeHtml(lamp.owner?.username || 'Anonymous')}</td>
@@ -60,7 +66,7 @@ export function createLampsTable() {
                   </tr>
                 `;
               })
-              .join('') || '<tr><td colspan="6" class="text-body-secondary">No lamp reports yet.</td></tr>'}
+              .join('') || '<tr><td colspan="7" class="text-body-secondary">No lamp reports yet.</td></tr>'}
           </tbody>
         </table>
       </div>

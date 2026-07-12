@@ -99,6 +99,15 @@
   line-height: 1.4;
 }
 
+.lamp-popup__image {
+  width: 100%;
+  max-height: 130px;
+  margin: 0.25rem 0 0.45rem;
+  border-radius: 0.6rem;
+  border: 1px solid rgba(132, 87, 30, 0.16);
+  object-fit: cover;
+}
+
 .lamp-popup__coords {
   color: #8c5a35;
   font-size: 0.78rem;
@@ -154,6 +163,15 @@
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.bulgaria-map__selected-image {
+  width: min(280px, 100%);
+  max-height: 170px;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(132, 87, 30, 0.16);
+  object-fit: cover;
+  margin-bottom: 0.5rem;
 }
 
 @keyframes lamp-pulse {

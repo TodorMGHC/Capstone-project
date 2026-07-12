@@ -1,5 +1,6 @@
 import './lamp-form.css';
 import { closeLampForm, getAppState, saveLamp, startLampCoordinatePick } from '../../lib/app-store.js';
+import { escapeHtml } from '../../utils/escape-html.js';
 
 let isSubmitting = false;
 
@@ -42,6 +43,14 @@ export function createLampForm() {
               <div class="lamp-form__field">
                 <label for="lamp-comments">Comments</label>
                 <textarea id="lamp-comments" name="comments" rows="4" class="form-control form-control-lg" placeholder="Add extra details about the broken lamp.">${lamp ? lamp.comments || '' : ''}</textarea>
+              </div>
+              <div class="lamp-form__field">
+                <label for="lamp-cover-image">Cover image (max 5 MB)</label>
+                ${lamp?.cover_image_url ? `<img class="lamp-form__image-preview" src="${escapeHtml(lamp.cover_image_url)}" alt="Current report cover" />` : ''}
+                <input id="lamp-cover-image" name="coverImage" type="file" class="form-control" accept="image/jpeg,image/png,image/webp,image/gif" />
+                ${lamp?.cover_image_url
+                  ? '<label class="lamp-form__checkbox"><input type="checkbox" name="removeCoverImage" /> Remove current image</label>'
+                  : '<small class="text-body-secondary">Optional image shown on report cards and in admin panel.</small>'}
               </div>
               <div class="row g-3">
                 <div class="col-md-6 lamp-form__field">
@@ -117,6 +126,8 @@ export function afterRenderLampForm(rootElement) {
         comments: formData.get('comments')?.toString() || '',
         latitude: formData.get('latitude')?.toString() || '',
         longitude: formData.get('longitude')?.toString() || '',
+        coverImageFile: formData.get('coverImage'),
+        removeCoverImage: formData.get('removeCoverImage') === 'on',
       });
 
       if (result.error && status) {
