@@ -4,6 +4,7 @@ import { getAuthState } from '../../contexts/AuthContext.js';
 import { createBulgariaMap } from '../map/BulgariaMap.js';
 import { createLampsTable } from '../table/LampsTable.js';
 import { createLampForm } from '../lamps/LampForm.js';
+import { openAuthModal, openCreateLampForm } from '../../lib/app-store.js';
 
 function formatSummaryNumber(value) {
   return new Intl.NumberFormat('en-GB').format(value);
@@ -39,6 +40,9 @@ export function createAppLayout() {
         <div class="app-layout__tabs" role="tablist" aria-label="Map and table views">
           <button class="app-layout__tab ${lampState.dashboardView === 'map' ? 'is-active' : ''}" type="button" data-view="map">Map</button>
           <button class="app-layout__tab ${lampState.dashboardView === 'table' ? 'is-active' : ''}" type="button" data-view="table">Table</button>
+          <button class="app-layout__tab app-layout__tab--action" type="button" data-open-lamp-form>
+            Add report
+          </button>
         </div>
 
         <div class="app-layout__stats">
@@ -80,5 +84,14 @@ export function afterRenderAppLayout(rootElement) {
     button.addEventListener('click', () => {
       setDashboardView(button.dataset.view);
     });
+  });
+
+  rootElement.querySelector('[data-open-lamp-form]')?.addEventListener('click', () => {
+    if (!getAuthState().currentUser) {
+      openAuthModal('login');
+      return;
+    }
+
+    openCreateLampForm(42.7, 25.5);
   });
 }

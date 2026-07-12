@@ -1,4 +1,5 @@
 import './lamp-form.css';
+import { Modal } from 'bootstrap';
 import { closeLampForm, getAppState, saveLamp } from '../../lib/app-store.js';
 
 let activeLampModal = null;
@@ -73,21 +74,17 @@ export function afterRenderLampForm(rootElement) {
     return;
   }
 
-  const bootstrapModal = window.bootstrap?.Modal;
-
   if (activeLampModal) {
     activeLampModal.hide();
     activeLampModal.dispose();
   }
 
-  if (bootstrapModal) {
-    activeLampModal = bootstrapModal.getOrCreateInstance(modalElement, {
-      backdrop: 'static',
-      focus: true,
-      keyboard: true,
-    });
-    activeLampModal.show();
-  }
+  activeLampModal = Modal.getOrCreateInstance(modalElement, {
+    backdrop: 'static',
+    focus: true,
+    keyboard: true,
+  });
+  activeLampModal.show();
 
   modalElement.addEventListener('hidden.bs.modal', () => {
     closeLampForm();

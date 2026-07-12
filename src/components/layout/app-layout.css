@@ -59,6 +59,16 @@
   color: #1f1304;
 }
 
+.app-layout__tab--action {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(245, 158, 11, 0.16);
+}
+
+.app-layout__tab--action:hover,
+.app-layout__tab--action:focus {
+  background: rgba(255, 248, 236, 0.95);
+}
+
 .app-layout__stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

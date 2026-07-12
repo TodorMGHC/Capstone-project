@@ -161,7 +161,13 @@ export function afterRenderBulgariaMap(rootElement) {
     activeMap.fitBounds(bounds, { padding: [36, 36], maxZoom: 11, animate: false });
   }
 
-  activeMap.on('click', (event) => {
+  mapElement.addEventListener('click', (event) => {
+    if (event.target.closest('.leaflet-control, .leaflet-marker-icon, .leaflet-popup')) {
+      return;
+    }
+
+    const clickPoint = activeMap.mouseEventToLatLng(event);
+
     if (!getAppState().session) {
       if (hintElement) {
         hintElement.textContent = 'Sign in to add lamps.';
@@ -173,7 +179,7 @@ export function afterRenderBulgariaMap(rootElement) {
       }
 
       visitorTooltip = L.tooltip()
-        .setLatLng(event.latlng)
+        .setLatLng(clickPoint)
         .setContent('Sign in to add lamps')
         .addTo(activeMap);
 
@@ -187,15 +193,15 @@ export function afterRenderBulgariaMap(rootElement) {
       return;
     }
 
-    const latitude = event.latlng.lat.toFixed(6);
-    const longitude = event.latlng.lng.toFixed(6);
+    const latitude = clickPoint.lat.toFixed(6);
+    const longitude = clickPoint.lng.toFixed(6);
 
     if (hintElement) {
       hintElement.textContent = `Draft lamp location set to ${latitude}, ${longitude}.`;
       hintElement.classList.remove('bulgaria-map__hint--warn');
     }
 
-    setTimeout(() => openCreateLampForm(latitude, longitude), 0);
+    openCreateLampForm(latitude, longitude);
   });
 
   activeMap.on('popupopen', (event) => {
