@@ -2,7 +2,19 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 import './bulgaria-map.css';
-import { canManageLamp, getAppState, openCreateLampForm, openEditLampForm, removeLamp, selectLamp, setDashboardView, setSelectedLampId, stopLampCoordinatePick } from '../../lib/app-store.js';
+import {
+  canManageLamp,
+  consumeNextSelectedLampZoomLevel,
+  consumeSelectedLampPopupSuppression,
+  getAppState,
+  openCreateLampForm,
+  openEditLampForm,
+  removeLamp,
+  selectLamp,
+  setDashboardView,
+  setSelectedLampId,
+  stopLampCoordinatePick,
+} from '../../lib/app-store.js';
 import { escapeHtml } from '../../utils/escape-html.js';
 import { EyeIcon, PencilIcon, TrashIcon } from '../icons.js';
 
@@ -233,11 +245,15 @@ export function afterRenderBulgariaMap(rootElement) {
   const selectedLamp = state.lamps.find((lamp) => lamp.id === state.selectedLampId) ?? null;
 
   if (selectedLamp) {
-    activeMap.setView([selectedLamp.latitude, selectedLamp.longitude], Math.max(activeMap.getZoom(), 11), { animate: false });
+    const zoomOverride = consumeNextSelectedLampZoomLevel();
+    const focusZoom = zoomOverride ?? Math.max(activeMap.getZoom(), 14);
+    activeMap.setView([selectedLamp.latitude, selectedLamp.longitude], focusZoom, { animate: false });
     const selectedMarker = markersByLampId.get(selectedLamp.id);
     if (selectedMarker) {
       selectedMarker.setIcon(selectedIcon);
-      selectedMarker.openPopup();
+      if (!consumeSelectedLampPopupSuppression()) {
+        selectedMarker.openPopup();
+      }
     }
   } else if (bounds.length) {
     activeMap.fitBounds(bounds, { padding: [36, 36], maxZoom: 11, animate: false });

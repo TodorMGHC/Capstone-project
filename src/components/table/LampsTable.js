@@ -1,5 +1,14 @@
 import './lamps-table.css';
-import { canManageLamp, getAppState, openEditLampForm, removeLamp, selectLamp, setDashboardView } from '../../lib/app-store.js';
+import {
+  canManageLamp,
+  getAppState,
+  openEditLampForm,
+  removeLamp,
+  selectLamp,
+  setDashboardView,
+  setNextSelectedLampZoomLevel,
+  suppressNextSelectedLampPopup,
+} from '../../lib/app-store.js';
 import { EyeIcon, MapPinIcon, PencilIcon, TrashIcon } from '../icons.js';
 import { escapeHtml } from '../../utils/escape-html.js';
 
@@ -110,6 +119,8 @@ export function afterRenderLampsTable(rootElement) {
       }
 
       if (button.dataset.lampAction === 'view') {
+        suppressNextSelectedLampPopup();
+        setNextSelectedLampZoomLevel(19);
         selectLamp(lampId);
         setDashboardView('map');
         return;

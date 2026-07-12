@@ -27,6 +27,19 @@
   border-color: rgba(132, 87, 30, 0.1);
 }
 
+.lamp-form-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.lamp-form-card__header .btn-close {
+  margin-top: 0.1rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .lamp-form {
   display: grid;
   gap: 1rem;

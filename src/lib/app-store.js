@@ -20,6 +20,8 @@ const state = {
   lampFormError: '',
   dashboardView: 'map',
   awaitingCoordinates: false,
+  suppressNextSelectedLampPopup: false,
+  nextSelectedLampZoomLevel: null,
 };
 
 const listeners = new Set();
@@ -273,6 +275,31 @@ export function setAuthMode(mode) {
 
 export function setDashboardView(view) {
   setState({ dashboardView: view });
+}
+
+export function suppressNextSelectedLampPopup() {
+  state.suppressNextSelectedLampPopup = true;
+}
+
+export function consumeSelectedLampPopupSuppression() {
+  const suppressed = Boolean(state.suppressNextSelectedLampPopup);
+  state.suppressNextSelectedLampPopup = false;
+  return suppressed;
+}
+
+export function setNextSelectedLampZoomLevel(zoomLevel) {
+  const numericZoom = Number(zoomLevel);
+  if (Number.isNaN(numericZoom)) {
+    return;
+  }
+
+  state.nextSelectedLampZoomLevel = numericZoom;
+}
+
+export function consumeNextSelectedLampZoomLevel() {
+  const zoomLevel = state.nextSelectedLampZoomLevel;
+  state.nextSelectedLampZoomLevel = null;
+  return typeof zoomLevel === 'number' ? zoomLevel : null;
 }
 
 export function setSelectedLampId(lampId) {
