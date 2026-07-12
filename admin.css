@@ -195,7 +195,8 @@ td small {
 }
 
 .popup input,
-.popup textarea {
+.popup textarea,
+.popup select {
   width: 100%;
   border: 1px solid var(--admin-border);
   border-radius: 8px;

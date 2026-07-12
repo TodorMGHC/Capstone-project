@@ -19,6 +19,9 @@ const state = {
   activeTab: 'reports',
   editReportId: null,
   deleteReportId: null,
+  createUserOpen: false,
+  editUserId: null,
+  deleteUserId: null,
   saving: false,
 };
 
@@ -36,6 +39,29 @@ function reportById(reportId) {
 
 function userById(userId) {
   return state.users.find((user) => user.id === userId) ?? null;
+}
+
+function roleOptions(selectedRole) {
+  const roles = ['user', 'admin', 'visitor'];
+  return roles
+    .map((role) => `<option value="${role}" ${selectedRole === role ? 'selected' : ''}>${escapeHtml(role)}</option>`)
+    .join('');
+}
+
+async function invokeEdgeFunction(functionName, payload) {
+  const { data, error } = await supabase.functions.invoke(functionName, {
+    body: payload,
+  });
+
+  if (error) {
+    return { data: null, error: error.message || `Failed to call function ${functionName}.` };
+  }
+
+  if (data?.error) {
+    return { data: null, error: data.error };
+  }
+
+  return { data, error: '' };
 }
 
 function renderNotice() {
@@ -96,16 +122,19 @@ function renderReportsTable() {
 
 function renderUsersTable() {
   if (!state.users.length) {
-    return '<p class="notice">No users found.</p>';
+    return `
+      <div class="d-flex justify-content-end mb-2">
+        <button type="button" class="btn btn-warning btn-sm" data-user-action="add" ${state.saving ? 'disabled' : ''}>Add</button>
+      </div>
+      <p class="notice">No users found.</p>
+    `;
   }
 
   const rows = state.users
     .map((user) => {
       const isSelf = user.id === state.session?.user?.id;
-      const toggleAction = user.role === 'admin' ? 'remove-admin' : 'make-admin';
-      const toggleLabel = user.role === 'admin' ? 'Remove Admin' : 'Make Admin';
-      const disabled = state.saving || isSelf;
-      const disabledAttr = disabled ? 'disabled' : '';
+      const editDisabledAttr = state.saving ? 'disabled' : '';
+      const deleteDisabledAttr = state.saving || isSelf ? 'disabled' : '';
       const hint = isSelf ? ' (you)' : '';
 
       return `
@@ -115,9 +144,10 @@ function renderUsersTable() {
           <td>${escapeHtml(user.role || 'user')}${hint}</td>
           <td><small>${formatDate(user.created_at)}</small></td>
           <td>
-            <button type="button" class="btn-lite" data-user-action="${toggleAction}" data-user-id="${user.id}" ${disabledAttr}>
-              ${toggleLabel}
-            </button>
+            <div class="actions">
+              <button type="button" class="btn-lite" data-user-action="edit" data-user-id="${user.id}" ${editDisabledAttr}>Edit</button>
+              <button type="button" class="btn-lite btn-danger" data-user-action="delete" data-user-id="${user.id}" ${deleteDisabledAttr}>Delete</button>
+            </div>
           </td>
         </tr>
       `;
@@ -125,6 +155,9 @@ function renderUsersTable() {
     .join('');
 
   return `
+    <div class="d-flex justify-content-end mb-2">
+      <button type="button" class="btn btn-warning btn-sm" data-user-action="add" ${state.saving ? 'disabled' : ''}>Add</button>
+    </div>
     <div class="table-wrap">
       <table>
         <thead>
@@ -203,6 +236,108 @@ function renderDeletePopup() {
   `;
 }
 
+function renderCreateUserPopup() {
+  if (!state.createUserOpen) {
+    return '';
+  }
+
+  return `
+    <div class="overlay" data-popup="create-user">
+      <div class="popup" role="dialog" aria-modal="true" aria-labelledby="user-create-title">
+        <h2 id="user-create-title">Create User</h2>
+        <form data-form="create-user">
+          <label>
+            Username
+            <input name="username" required maxlength="60" />
+          </label>
+          <label>
+            Email
+            <input name="email" type="email" required />
+          </label>
+          <label>
+            Password
+            <input name="password" type="password" minlength="6" required />
+          </label>
+          <label>
+            Role
+            <select name="role" required>
+              ${roleOptions('user')}
+            </select>
+          </label>
+
+          <div class="popup-actions">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-popup-close>Cancel</button>
+            <button type="submit" class="btn btn-warning btn-sm" ${state.saving ? 'disabled' : ''}>Create</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+}
+
+function renderEditUserPopup() {
+  const user = userById(state.editUserId);
+  if (!user) {
+    return '';
+  }
+
+  return `
+    <div class="overlay" data-popup="edit-user">
+      <div class="popup" role="dialog" aria-modal="true" aria-labelledby="user-edit-title">
+        <h2 id="user-edit-title">Edit User</h2>
+        <form data-form="edit-user">
+          <input type="hidden" name="id" value="${escapeHtml(user.id)}" />
+          <label>
+            Username
+            <input name="username" value="${escapeHtml(user.username || '')}" required maxlength="60" />
+          </label>
+          <label>
+            Email (optional)
+            <input name="email" type="email" placeholder="Leave blank to keep current email" />
+          </label>
+          <label>
+            Password (optional)
+            <input name="password" type="password" minlength="6" placeholder="Leave blank to keep current password" />
+          </label>
+          <label>
+            Role
+            <select name="role" required>
+              ${roleOptions(user.role || 'user')}
+            </select>
+          </label>
+          <p class="muted">User ID: ${escapeHtml(user.id)}</p>
+
+          <div class="popup-actions">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-popup-close>Cancel</button>
+            <button type="submit" class="btn btn-warning btn-sm" ${state.saving ? 'disabled' : ''}>Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+}
+
+function renderDeleteUserPopup() {
+  const user = userById(state.deleteUserId);
+  if (!user) {
+    return '';
+  }
+
+  return `
+    <div class="overlay" data-popup="delete-user">
+      <div class="popup" role="dialog" aria-modal="true" aria-labelledby="user-delete-title">
+        <h2 id="user-delete-title">Delete User</h2>
+        <p>Delete user <strong>${escapeHtml(user.username || user.id)}</strong>?</p>
+        <p class="muted">All reports created by this user will also be removed.</p>
+        <div class="popup-actions">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-popup-close>Cancel</button>
+          <button type="button" class="btn btn-danger btn-sm" data-confirm-user-delete ${state.saving ? 'disabled' : ''}>Delete</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderAdminContent() {
   if (state.loading) {
     return '<main class="admin-main"><p>Loading admin panel...</p></main>';
@@ -234,6 +369,9 @@ function renderAdminContent() {
     </main>
     ${renderEditPopup()}
     ${renderDeletePopup()}
+    ${renderCreateUserPopup()}
+    ${renderEditUserPopup()}
+    ${renderDeleteUserPopup()}
   `;
 }
 
@@ -336,13 +474,12 @@ async function refreshData() {
   }
 }
 
-async function saveReport(event) {
-  event.preventDefault();
+async function saveReport(formElement) {
   if (state.saving) {
     return;
   }
 
-  const formData = new FormData(event.currentTarget);
+  const formData = new FormData(formElement);
   const id = String(formData.get('id') || '').trim();
   const title = String(formData.get('title') || '').trim();
   const comments = String(formData.get('comments') || '').trim();
@@ -388,27 +525,95 @@ async function confirmDeleteReport() {
   await refreshData();
 }
 
-async function changeUserRole(userId, role) {
-  const user = userById(userId);
-  if (!user || state.saving) {
+async function createUser(formElement) {
+  if (state.saving) {
     return;
   }
 
-  if (user.id === state.session?.user?.id && role === 'user') {
-    setState({ error: 'You cannot remove your own admin role.' });
+  const formData = new FormData(formElement);
+  const username = String(formData.get('username') || '').trim();
+  const email = String(formData.get('email') || '').trim();
+  const password = String(formData.get('password') || '').trim();
+  const role = String(formData.get('role') || 'user').trim();
+
+  if (!username || !email || !password || !role) {
+    setState({ error: 'Username, email, password, and role are required.' });
     return;
   }
 
   setState({ saving: true, error: '', message: '' });
 
-  const { error } = await supabase.from('profiles').update({ role }).eq('id', userId);
+  const result = await invokeEdgeFunction('admin-user-create', {
+    username,
+    email,
+    password,
+    role,
+  });
 
-  if (error) {
-    setState({ saving: false, error: error.message });
+  if (result.error) {
+    setState({ saving: false, error: result.error });
     return;
   }
 
-  setState({ saving: false, message: role === 'admin' ? 'User promoted to admin.' : 'Admin role removed.' });
+  setState({ saving: false, createUserOpen: false, message: 'User created successfully.' });
+  await refreshData();
+}
+
+async function saveUser(formElement) {
+  if (state.saving) {
+    return;
+  }
+
+  const formData = new FormData(formElement);
+  const userId = String(formData.get('id') || '').trim();
+  const username = String(formData.get('username') || '').trim();
+  const emailRaw = String(formData.get('email') || '').trim();
+  const passwordRaw = String(formData.get('password') || '').trim();
+  const role = String(formData.get('role') || 'user').trim();
+  const email = emailRaw || null;
+  const password = passwordRaw || null;
+
+  if (!userId || !username || !role) {
+    setState({ error: 'User ID, username, and role are required.' });
+    return;
+  }
+
+  setState({ saving: true, error: '', message: '' });
+
+  const result = await invokeEdgeFunction('admin-user-update', {
+    userId,
+    username,
+    role,
+    email,
+    password,
+  });
+
+  if (result.error) {
+    setState({ saving: false, error: result.error });
+    return;
+  }
+
+  setState({ saving: false, editUserId: null, message: 'User updated successfully.' });
+  await refreshData();
+}
+
+async function confirmDeleteUser() {
+  if (!state.deleteUserId || state.saving) {
+    return;
+  }
+
+  setState({ saving: true, error: '', message: '' });
+
+  const result = await invokeEdgeFunction('admin-user-delete', {
+    userId: state.deleteUserId,
+  });
+
+  if (result.error) {
+    setState({ saving: false, error: result.error });
+    return;
+  }
+
+  setState({ saving: false, deleteUserId: null, message: 'User deleted successfully.' });
   await refreshData();
 }
 
@@ -420,12 +625,25 @@ async function handleClick(event) {
   }
 
   if (event.target.closest('[data-popup-close]')) {
-    setState({ editReportId: null, deleteReportId: null, error: '', message: '' });
+    setState({
+      editReportId: null,
+      deleteReportId: null,
+      createUserOpen: false,
+      editUserId: null,
+      deleteUserId: null,
+      error: '',
+      message: '',
+    });
     return;
   }
 
   if (event.target.closest('[data-confirm-delete]')) {
     await confirmDeleteReport();
+    return;
+  }
+
+  if (event.target.closest('[data-confirm-user-delete]')) {
+    await confirmDeleteUser();
     return;
   }
 
@@ -451,13 +669,28 @@ async function handleClick(event) {
     const action = userActionButton.dataset.userAction;
     const userId = userActionButton.dataset.userId;
 
-    if (action === 'make-admin') {
-      await changeUserRole(userId, 'admin');
+    if (action === 'add') {
+      setState({ createUserOpen: true, editUserId: null, deleteUserId: null, error: '', message: '' });
       return;
     }
 
-    if (action === 'remove-admin') {
-      await changeUserRole(userId, 'user');
+    if (!userId) {
+      return;
+    }
+
+    if (action === 'edit') {
+      setState({ editUserId: userId, createUserOpen: false, deleteUserId: null, error: '', message: '' });
+      return;
+    }
+
+    if (action === 'delete') {
+      if (userId === state.session?.user?.id) {
+        setState({ error: 'You cannot delete your own account from this panel.' });
+        return;
+      }
+
+      setState({ deleteUserId: userId, createUserOpen: false, editUserId: null, error: '', message: '' });
+      return;
     }
 
     return;
@@ -470,8 +703,26 @@ async function handleClick(event) {
 }
 
 async function handleSubmit(event) {
-  if (event.target.matches('[data-form="edit-report"]')) {
-    await saveReport(event);
+  const formElement = event.target;
+  if (!(formElement instanceof HTMLFormElement)) {
+    return;
+  }
+
+  if (formElement.matches('[data-form="edit-report"]')) {
+    event.preventDefault();
+    await saveReport(formElement);
+    return;
+  }
+
+  if (formElement.matches('[data-form="create-user"]')) {
+    event.preventDefault();
+    await createUser(formElement);
+    return;
+  }
+
+  if (formElement.matches('[data-form="edit-user"]')) {
+    event.preventDefault();
+    await saveUser(formElement);
   }
 }
 
