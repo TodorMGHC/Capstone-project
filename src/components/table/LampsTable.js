@@ -6,7 +6,7 @@ import {
   removeLamp,
   selectLamp,
   setDashboardView,
-  setNextSelectedLampZoomLevel,
+  setNextSelectedLampFocus,
   suppressNextSelectedLampPopup,
 } from '../../lib/app-store.js';
 import { EyeIcon, MapPinIcon, PencilIcon, TrashIcon } from '../icons.js';
@@ -67,7 +67,16 @@ export function createLampsTable() {
                     <td>${escapeHtml(formatDate(lamp.created_at))}</td>
                     <td>
                       <div class="lamps-table__actions">
-                        <button class="lamp-icon-btn" type="button" data-lamp-action="view" data-lamp-id="${escapeHtml(lamp.id)}" title="Show on map" aria-label="Show on map">${EyeIcon()}</button>
+                        <button
+                          class="lamp-icon-btn"
+                          type="button"
+                          data-lamp-action="view"
+                          data-lamp-id="${escapeHtml(lamp.id)}"
+                          data-latitude="${Number(lamp.latitude).toFixed(6)}"
+                          data-longitude="${Number(lamp.longitude).toFixed(6)}"
+                          title="Show on map"
+                          aria-label="Show on map"
+                        >${EyeIcon()}</button>
                         ${editable ? `<button class="lamp-icon-btn lamp-icon-btn--warning" type="button" data-lamp-action="edit" data-lamp-id="${escapeHtml(lamp.id)}" title="Edit lamp" aria-label="Edit lamp">${PencilIcon()}</button>` : ''}
                         ${editable ? `<button class="lamp-icon-btn lamp-icon-btn--danger" type="button" data-lamp-action="delete" data-lamp-id="${escapeHtml(lamp.id)}" title="Delete lamp" aria-label="Delete lamp">${TrashIcon()}</button>` : ''}
                       </div>
@@ -119,8 +128,25 @@ export function afterRenderLampsTable(rootElement) {
       }
 
       if (button.dataset.lampAction === 'view') {
+        const latitude = Number(button.dataset.latitude);
+        const longitude = Number(button.dataset.longitude);
         suppressNextSelectedLampPopup();
-        setNextSelectedLampZoomLevel(19);
+        if (!Number.isNaN(latitude) && !Number.isNaN(longitude)) {
+          setNextSelectedLampFocus({
+            latitude,
+            longitude,
+            zoom: 17,
+          });
+        } else {
+          const lamp = state.lamps.find((item) => item.id === lampId);
+          if (lamp) {
+            setNextSelectedLampFocus({
+              latitude: lamp.latitude,
+              longitude: lamp.longitude,
+              zoom: 17,
+            });
+          }
+        }
         selectLamp(lampId);
         setDashboardView('map');
         return;

@@ -22,6 +22,7 @@ const state = {
   awaitingCoordinates: false,
   suppressNextSelectedLampPopup: false,
   nextSelectedLampZoomLevel: null,
+  nextSelectedLampFocus: null,
 };
 
 const listeners = new Set();
@@ -294,6 +295,28 @@ export function setNextSelectedLampZoomLevel(zoomLevel) {
   }
 
   state.nextSelectedLampZoomLevel = numericZoom;
+}
+
+export function setNextSelectedLampFocus({ latitude, longitude, zoom }) {
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+  const zoomLevel = Number(zoom);
+
+  if (Number.isNaN(lat) || Number.isNaN(lng)) {
+    return;
+  }
+
+  state.nextSelectedLampFocus = {
+    latitude: lat,
+    longitude: lng,
+    zoom: Number.isNaN(zoomLevel) ? null : zoomLevel,
+  };
+}
+
+export function consumeNextSelectedLampFocus() {
+  const focus = state.nextSelectedLampFocus;
+  state.nextSelectedLampFocus = null;
+  return focus;
 }
 
 export function consumeNextSelectedLampZoomLevel() {

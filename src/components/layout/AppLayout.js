@@ -4,7 +4,7 @@ import { getAuthState } from '../../contexts/AuthContext.js';
 import { createBulgariaMap } from '../map/BulgariaMap.js';
 import { createLampsTable } from '../table/LampsTable.js';
 import { createLampForm } from '../lamps/LampForm.js';
-import { openAuthModal, openCreateLampForm } from '../../lib/app-store.js';
+import { openAuthModal, startLampCoordinatePick } from '../../lib/app-store.js';
 
 function formatSummaryNumber(value) {
   return new Intl.NumberFormat('en-GB').format(value);
@@ -92,6 +92,7 @@ export function afterRenderAppLayout(rootElement) {
       return;
     }
 
-    openCreateLampForm(42.7, 25.5);
+    setDashboardView('map');
+    startLampCoordinatePick();
   });
 }

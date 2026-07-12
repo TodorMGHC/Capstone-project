@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import './bulgaria-map.css';
 import {
   canManageLamp,
+  consumeNextSelectedLampFocus,
   consumeNextSelectedLampZoomLevel,
   consumeSelectedLampPopupSuppression,
   getAppState,
@@ -11,6 +12,7 @@ import {
   openEditLampForm,
   removeLamp,
   selectLamp,
+  setNextSelectedLampFocus,
   setDashboardView,
   setSelectedLampId,
   stopLampCoordinatePick,
@@ -138,6 +140,7 @@ export function afterRenderBulgariaMap(rootElement) {
   const bounds = [];
   const defaultIcon = createLampDivIcon(false);
   const selectedIcon = createLampDivIcon(true);
+  let selectedFocus = null;
 
   const handleMapPick = (clickPoint) => {
     if (!getAppState().session) {
@@ -187,6 +190,11 @@ export function afterRenderBulgariaMap(rootElement) {
     marker.bindPopup(buildPopupContent(lamp, editable));
 
     marker.on('click', () => {
+      setNextSelectedLampFocus({
+        latitude: lamp.latitude,
+        longitude: lamp.longitude,
+        zoom: 17,
+      });
       setTimeout(() => selectLamp(lamp.id), 0);
     });
 
@@ -245,9 +253,18 @@ export function afterRenderBulgariaMap(rootElement) {
   const selectedLamp = state.lamps.find((lamp) => lamp.id === state.selectedLampId) ?? null;
 
   if (selectedLamp) {
+    const focusOverride = consumeNextSelectedLampFocus();
     const zoomOverride = consumeNextSelectedLampZoomLevel();
-    const focusZoom = zoomOverride ?? Math.max(activeMap.getZoom(), 14);
-    activeMap.setView([selectedLamp.latitude, selectedLamp.longitude], focusZoom, { animate: false });
+    const focusLat = focusOverride?.latitude ?? selectedLamp.latitude;
+    const focusLng = focusOverride?.longitude ?? selectedLamp.longitude;
+    const focusZoom = focusOverride?.zoom ?? zoomOverride ?? Math.max(activeMap.getZoom(), 14);
+
+    activeMap.setView([focusLat, focusLng], focusZoom, { animate: false });
+    selectedFocus = {
+      latitude: focusLat,
+      longitude: focusLng,
+      zoom: focusZoom,
+    };
     const selectedMarker = markersByLampId.get(selectedLamp.id);
     if (selectedMarker) {
       selectedMarker.setIcon(selectedIcon);
@@ -263,15 +280,15 @@ export function afterRenderBulgariaMap(rootElement) {
     handleMapPick(event.latlng);
   });
 
-  mapElement.addEventListener('dblclick', (event) => {
-    if (event.target.closest('.leaflet-control, .leaflet-marker-icon, .leaflet-popup')) {
+  requestAnimationFrame(() => {
+    if (!activeMap) {
       return;
     }
 
-    handleMapPick(activeMap.mouseEventToLatLng(event));
-  });
+    activeMap.invalidateSize();
 
-  requestAnimationFrame(() => {
-    activeMap?.invalidateSize();
+    if (selectedFocus) {
+      activeMap.setView([selectedFocus.latitude, selectedFocus.longitude], selectedFocus.zoom, { animate: false });
+    }
   });
 }
