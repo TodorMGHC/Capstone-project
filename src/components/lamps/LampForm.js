@@ -1,8 +1,7 @@
 import './lamp-form.css';
-import { Modal } from 'bootstrap';
 import { closeLampForm, getAppState, saveLamp, startLampCoordinatePick } from '../../lib/app-store.js';
 
-let activeLampModal = null;
+let isSubmitting = false;
 
 function getLampFormState() {
   const state = getAppState();
@@ -23,17 +22,17 @@ export function createLampForm() {
   }
 
   return `
-    <div class="modal fade lamp-form-modal" data-lamp-modal tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-          <div class="modal-header px-4 pt-4 pb-3">
+    <div class="lamp-form-overlay" data-lamp-modal>
+      <div class="lamp-form-dialog" role="dialog" aria-modal="true" aria-label="Add lamp report">
+        <div class="lamp-form-card">
+          <div class="lamp-form-card__header px-4 pt-4 pb-3">
             <div>
               <p class="text-uppercase small mb-1 text-warning fw-semibold">${isEditing ? 'Edit lamp' : 'Add lamp'}</p>
               <h2 class="h4 mb-0">${isEditing ? 'Update the report' : 'Report a burnt out lamp'}</h2>
             </div>
             <button type="button" class="btn-close" data-lamp-close aria-label="Close"></button>
           </div>
-          <div class="modal-body px-4 pb-4">
+          <div class="lamp-form-card__body px-4 pb-4">
             <form class="lamp-form" data-lamp-form>
               <input type="hidden" name="id" value="${lamp ? lamp.id : ''}" />
               <div class="lamp-form__field">
@@ -72,23 +71,14 @@ export function afterRenderLampForm(rootElement) {
   const modalElement = rootElement.querySelector('[data-lamp-modal]');
 
   if (!modalElement) {
+    isSubmitting = false;
     return;
   }
 
-  if (activeLampModal) {
-    activeLampModal.hide();
-    activeLampModal.dispose();
-  }
-
-  activeLampModal = Modal.getOrCreateInstance(modalElement, {
-    backdrop: 'static',
-    focus: true,
-    keyboard: true,
-  });
-  activeLampModal.show();
-
-  modalElement.addEventListener('hidden.bs.modal', () => {
-    closeLampForm();
+  modalElement.addEventListener('click', (event) => {
+    if (event.target === modalElement) {
+      closeLampForm();
+    }
   });
 
   modalElement.querySelector('[data-lamp-close]')?.addEventListener('click', () => {
@@ -110,6 +100,11 @@ export function afterRenderLampForm(rootElement) {
   if (form) {
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
+      if (isSubmitting) {
+        return;
+      }
+      isSubmitting = true;
+
       const formData = new FormData(form);
 
       if (status) {
@@ -127,6 +122,8 @@ export function afterRenderLampForm(rootElement) {
       if (result.error && status) {
         status.textContent = result.error;
       }
+
+      isSubmitting = false;
     });
   }
 }

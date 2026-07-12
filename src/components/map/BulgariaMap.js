@@ -190,31 +190,6 @@ export function afterRenderBulgariaMap(rootElement) {
     bounds.push([lamp.latitude, lamp.longitude]);
   });
 
-  const selectedLamp = state.lamps.find((lamp) => lamp.id === state.selectedLampId) ?? null;
-
-  if (selectedLamp) {
-    activeMap.setView([selectedLamp.latitude, selectedLamp.longitude], Math.max(activeMap.getZoom(), 11), { animate: false });
-    const selectedMarker = markersByLampId.get(selectedLamp.id);
-    if (selectedMarker) {
-      selectedMarker.setIcon(selectedIcon);
-      selectedMarker.openPopup();
-    }
-  } else if (bounds.length) {
-    activeMap.fitBounds(bounds, { padding: [36, 36], maxZoom: 11, animate: false });
-  }
-
-  activeMap.on('click', (event) => {
-    handleMapPick(event.latlng);
-  });
-
-  mapElement.addEventListener('click', (event) => {
-    if (event.target.closest('.leaflet-control, .leaflet-marker-icon, .leaflet-popup')) {
-      return;
-    }
-
-    handleMapPick(activeMap.mouseEventToLatLng(event));
-  });
-
   activeMap.on('popupopen', (event) => {
     const popupContent = event.popup.getElement()?.querySelector('[data-lamp-popup]');
     if (!popupContent) {
@@ -260,6 +235,31 @@ export function afterRenderBulgariaMap(rootElement) {
         }
       });
     });
+  });
+
+  const selectedLamp = state.lamps.find((lamp) => lamp.id === state.selectedLampId) ?? null;
+
+  if (selectedLamp) {
+    activeMap.setView([selectedLamp.latitude, selectedLamp.longitude], Math.max(activeMap.getZoom(), 11), { animate: false });
+    const selectedMarker = markersByLampId.get(selectedLamp.id);
+    if (selectedMarker) {
+      selectedMarker.setIcon(selectedIcon);
+      selectedMarker.openPopup();
+    }
+  } else if (bounds.length) {
+    activeMap.fitBounds(bounds, { padding: [36, 36], maxZoom: 11, animate: false });
+  }
+
+  activeMap.on('click', (event) => {
+    handleMapPick(event.latlng);
+  });
+
+  mapElement.addEventListener('click', (event) => {
+    if (event.target.closest('.leaflet-control, .leaflet-marker-icon, .leaflet-popup')) {
+      return;
+    }
+
+    handleMapPick(activeMap.mouseEventToLatLng(event));
   });
 
   requestAnimationFrame(() => {

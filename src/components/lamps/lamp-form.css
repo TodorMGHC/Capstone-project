@@ -1,12 +1,29 @@
-.lamp-form-modal .modal-content {
+.lamp-form-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1080;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(20, 14, 8, 0.45);
+  backdrop-filter: blur(3px);
+}
+
+.lamp-form-dialog {
+  width: min(760px, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+}
+
+.lamp-form-card {
   border: 1px solid rgba(245, 158, 11, 0.18);
   border-radius: 1.35rem;
   background: rgba(255, 252, 247, 0.97);
   box-shadow: 0 24px 80px rgba(126, 67, 0, 0.2);
 }
 
-.lamp-form-modal .modal-header,
-.lamp-form-modal .modal-footer {
+.lamp-form-card__header,
+.lamp-form-card__footer {
   border-color: rgba(132, 87, 30, 0.1);
 }
 
