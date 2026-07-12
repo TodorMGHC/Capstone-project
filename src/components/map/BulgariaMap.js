@@ -81,6 +81,7 @@ export function createBulgariaMap() {
 
 export function destroyBulgariaMap() {
   if (activeMap) {
+    activeMap._zooming = false;
     try {
       activeMap.remove();
     } catch {
@@ -115,6 +116,8 @@ export function afterRenderBulgariaMap(rootElement) {
     zoomControl: true,
     scrollWheelZoom: true,
     preferCanvas: true,
+    zoomAnimation: false,
+    fadeAnimation: false,
   });
 
   markersLayer = L.layerGroup().addTo(activeMap);
@@ -139,7 +142,7 @@ export function afterRenderBulgariaMap(rootElement) {
     marker.bindPopup(buildPopupContent(lamp, editable));
 
     marker.on('click', () => {
-      selectLamp(lamp.id);
+      setTimeout(() => selectLamp(lamp.id), 0);
     });
 
     bounds.push([lamp.latitude, lamp.longitude]);
@@ -148,18 +151,18 @@ export function afterRenderBulgariaMap(rootElement) {
   const selectedLamp = state.lamps.find((lamp) => lamp.id === state.selectedLampId) ?? null;
 
   if (selectedLamp) {
-    activeMap.setView([selectedLamp.latitude, selectedLamp.longitude], Math.max(activeMap.getZoom(), 11));
+    activeMap.setView([selectedLamp.latitude, selectedLamp.longitude], Math.max(activeMap.getZoom(), 11), { animate: false });
     const selectedMarker = markersByLampId.get(selectedLamp.id);
     if (selectedMarker) {
       selectedMarker.setIcon(selectedIcon);
       selectedMarker.openPopup();
     }
   } else if (bounds.length) {
-    activeMap.fitBounds(bounds, { padding: [36, 36], maxZoom: 11 });
+    activeMap.fitBounds(bounds, { padding: [36, 36], maxZoom: 11, animate: false });
   }
 
   activeMap.on('click', (event) => {
-    if (!state.session) {
+    if (!getAppState().session) {
       if (hintElement) {
         hintElement.textContent = 'Sign in to add lamps.';
         hintElement.classList.add('bulgaria-map__hint--warn');
@@ -187,13 +190,12 @@ export function afterRenderBulgariaMap(rootElement) {
     const latitude = event.latlng.lat.toFixed(6);
     const longitude = event.latlng.lng.toFixed(6);
 
-    openCreateLampForm(latitude, longitude);
-    setSelectedLampId(null);
-
     if (hintElement) {
       hintElement.textContent = `Draft lamp location set to ${latitude}, ${longitude}.`;
       hintElement.classList.remove('bulgaria-map__hint--warn');
     }
+
+    setTimeout(() => openCreateLampForm(latitude, longitude), 0);
   });
 
   activeMap.on('popupopen', (event) => {
@@ -212,16 +214,20 @@ export function afterRenderBulgariaMap(rootElement) {
         }
 
         if (action === 'view') {
-          selectLamp(lampId);
-          setDashboardView('table');
           activeMap.closePopup();
+          setTimeout(() => {
+            selectLamp(lampId);
+            setDashboardView('table');
+          }, 0);
           return;
         }
 
         if (action === 'edit') {
-          selectLamp(lampId);
-          openEditLampForm(lampId);
           activeMap.closePopup();
+          setTimeout(() => {
+            selectLamp(lampId);
+            openEditLampForm(lampId);
+          }, 0);
           return;
         }
 
@@ -230,8 +236,10 @@ export function afterRenderBulgariaMap(rootElement) {
           if (!confirmed) {
             return;
           }
-          await removeLamp(lampId);
           activeMap.closePopup();
+          setTimeout(() => {
+            void removeLamp(lampId);
+          }, 0);
         }
       });
     });
