@@ -30,6 +30,7 @@ export function createHeader(currentPath) {
               ? `
                 <span class="site-auth__name">${state.profile?.username || state.session.user.email}</span>
                 <span class="site-auth__role">${state.profile?.role || 'user'}</span>
+                ${state.profile?.role === 'admin' ? '<a class="btn btn-dark btn-sm fw-semibold" href="/admin.html">Admin</a>' : ''}
                 <button class="btn btn-outline-warning btn-sm" type="button" data-action="logout">
                   <span class="me-1">${LogOutIcon()}</span>
                   Logout
