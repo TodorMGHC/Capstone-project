@@ -1,6 +1,6 @@
 import { createPageContent } from '../components/page-content.js';
 import { escapeHtml } from '../utils/escape-html.js';
-import { getAppState, signIn, signUp } from '../lib/app-store.js';
+import { forgotPassword, getAppState, signIn, signUp } from '../lib/app-store.js';
 import { navigateTo } from '../router/router.js';
 import './login.css';
 
@@ -45,6 +45,7 @@ function renderAuthForms() {
             <label for="login-password">Password</label>
             <input id="login-password" name="password" type="password" class="form-control form-control-lg" placeholder="Your password" required />
           </div>
+          <button class="auth-link" type="button" data-forgot-password>Forgot password?</button>
           <button class="btn btn-primary btn-lg" type="submit">Sign in</button>
           <p class="auth-status" data-login-status aria-live="polite"></p>
         </form>
@@ -130,6 +131,20 @@ export function afterRender(rootElement) {
   const registerForm = rootElement.querySelector('[data-register-form]');
   const loginStatus = rootElement.querySelector('[data-login-status]');
   const registerStatus = rootElement.querySelector('[data-register-status]');
+  const forgotPasswordButton = rootElement.querySelector('[data-forgot-password]');
+
+  forgotPasswordButton?.addEventListener('click', async () => {
+    if (loginStatus) {
+      loginStatus.textContent = 'Sending reset email...';
+    }
+
+    const emailInput = loginForm?.querySelector('input[name="email"]');
+    const result = await forgotPassword(emailInput?.value ?? '');
+
+    if (loginStatus) {
+      loginStatus.textContent = result.error || 'Reset email sent. Open the link to continue in the app.';
+    }
+  });
 
   loginForm?.addEventListener('submit', async (event) => {
     event.preventDefault();

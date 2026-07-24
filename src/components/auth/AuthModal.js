@@ -1,7 +1,7 @@
 import { createLoginForm } from './LoginForm.js';
 import { createRegisterForm } from './RegisterForm.js';
 import './auth-modal.css';
-import { closeAuthModal, getAppState, login, register, setAuthMode } from '../../lib/app-store.js';
+import { closeAuthModal, getAppState, login, register, requestPasswordReset, setAuthMode } from '../../lib/app-store.js';
 
 let lastRenderedOpen = false;
 let isSubmitting = false;
@@ -78,6 +78,18 @@ export function afterRenderAuthModal(rootElement) {
   const registerForm = modalElement.querySelector('[data-register-form]');
 
   if (loginForm) {
+    const forgotPasswordButton = loginForm.querySelector('[data-forgot-password]');
+
+    forgotPasswordButton?.addEventListener('click', async () => {
+      if (isSubmitting) return;
+      isSubmitting = true;
+
+      const emailInput = loginForm.querySelector('input[name="email"]');
+      await requestPasswordReset(emailInput?.value || '');
+
+      isSubmitting = false;
+    });
+
     loginForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       if (isSubmitting) return;

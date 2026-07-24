@@ -11,6 +11,7 @@ export function createLoginForm() {
         <label for="login-password">Password</label>
         <input id="login-password" name="password" type="password" class="form-control form-control-lg" placeholder="Your password" required />
       </div>
+      <button class="auth-form__link" type="button" data-forgot-password>Forgot password?</button>
       <button class="btn btn-warning btn-lg fw-semibold" type="submit">Sign in</button>
       <p class="auth-form__status" data-auth-status aria-live="polite"></p>
     </form>

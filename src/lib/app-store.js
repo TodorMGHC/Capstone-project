@@ -30,13 +30,13 @@ let authSubscription = null;
 let lampChannel = null;
 let initializePromise = null;
 
-function buildEmailRedirectUrl() {
+function buildAuthRedirectUrl(pathname = 'login') {
   if (typeof window === 'undefined') {
     return undefined;
   }
 
   const baseUrl = new URL(import.meta.env.BASE_URL || '/', window.location.origin);
-  return new URL('login', baseUrl).toString();
+  return new URL(pathname, baseUrl).toString();
 }
 
 function emitChange() {
@@ -419,7 +419,7 @@ export async function login(email, password) {
 }
 
 export async function register({ email, password, username }) {
-  const emailRedirectTo = buildEmailRedirectUrl();
+  const emailRedirectTo = buildAuthRedirectUrl('login');
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -443,6 +443,30 @@ export async function register({ email, password, username }) {
   setState({ authMessage: successMessage, authModalOpen: !data.session });
   await syncSession(data.session ?? null);
   return { error: '', session: data.session ?? null };
+}
+
+export async function requestPasswordReset(email) {
+  const normalizedEmail = String(email || '').trim();
+
+  if (!normalizedEmail) {
+    const errorMessage = 'Enter your email first to reset your password.';
+    setState({ authMessage: errorMessage });
+    return { error: errorMessage };
+  }
+
+  const redirectTo = buildAuthRedirectUrl('login');
+  const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+    ...(redirectTo ? { redirectTo } : {}),
+  });
+
+  if (error) {
+    setState({ authMessage: error.message });
+    return { error: error.message };
+  }
+
+  const successMessage = 'Password reset email sent. Open the link to continue in the app.';
+  setState({ authMessage: successMessage });
+  return { error: '' };
 }
 
 export async function logout() {
@@ -570,6 +594,10 @@ export async function signIn(email, password) {
 
 export async function signUp({ username, email, password }) {
   return register({ username, email, password });
+}
+
+export async function forgotPassword(email) {
+  return requestPasswordReset(email);
 }
 
 export async function reloadAppData() {

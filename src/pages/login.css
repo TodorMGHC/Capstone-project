@@ -103,6 +103,21 @@
   color: #dbeafe;
 }
 
+.auth-link {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--app-accent);
+  font-size: 0.92rem;
+  text-decoration: underline;
+  text-underline-offset: 0.14rem;
+}
+
+.auth-link:hover {
+  color: #bfdbfe;
+}
+
 .auth-rules {
   display: grid;
   gap: 0.9rem;
