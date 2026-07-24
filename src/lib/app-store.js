@@ -30,6 +30,15 @@ let authSubscription = null;
 let lampChannel = null;
 let initializePromise = null;
 
+function buildEmailRedirectUrl() {
+  if (typeof window === 'undefined') {
+    return undefined;
+  }
+
+  const baseUrl = new URL(import.meta.env.BASE_URL || '/', window.location.origin);
+  return new URL('login', baseUrl).toString();
+}
+
 function emitChange() {
   for (const listener of listeners) {
     listener(state);
@@ -410,10 +419,12 @@ export async function login(email, password) {
 }
 
 export async function register({ email, password, username }) {
+  const emailRedirectTo = buildEmailRedirectUrl();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
+      ...(emailRedirectTo ? { emailRedirectTo } : {}),
       data: {
         username,
       },

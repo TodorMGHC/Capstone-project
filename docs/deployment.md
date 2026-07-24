@@ -67,6 +67,11 @@ For your hosting provider, configure:
 
 These must point to your production Supabase project.
 
+Also configure Supabase Authentication redirect allowlist so email confirmation opens in your app:
+
+- Add `https://your-production-domain/login` under Authentication -> URL Configuration -> Redirect URLs.
+- Keep your local development URL (for example `http://localhost:5173/login`) while testing locally.
+
 ## 5) Build Frontend
 
 ```bash

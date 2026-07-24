@@ -24,6 +24,11 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_or_publishable_key
 
 These are required by `src/lib/supabase.js`.
 
+Supabase email confirmation links are configured to return users to the app login route (`/login`) on the current app origin. In Supabase Dashboard -> Authentication -> URL Configuration, add allowed redirect URLs for your environments, for example:
+
+- `http://localhost:5173/login`
+- `https://your-production-domain/login`
+
 ## 3) Start Development Server
 
 ```bash
